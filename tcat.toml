@@ -1,0 +1,5 @@
+[scripts.sh]
+extensions = ["sh"]
+
+[scripts.md]
+extensions = ["md"]

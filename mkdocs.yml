@@ -1,0 +1,77 @@
+site_name: Stability Flow
+site_description: A branching strategy specification for stable releases, safe hotfixes, and explicit reintegration.
+site_url: https://stability-flow.kitechsoftware.com/
+repo_url: https://github.com/kitechsoftware/stability-flow
+repo_name: kitechsoftware/stability-flow
+
+theme:
+  name: material
+  favicon: assets/img/logo.png
+  logo: assets/img/logo.png
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+nav:
+  - Home: index.md
+  - Specification:
+      - Spec: spec.md
+      - Release Flow: release-flow.md
+      - Enforcement: enforcement.md
+      - Design: design.md
+  - Maintainers:
+      - Maintainer Notes: maintainer-notes.md
+  - Tools:
+      - CLI Validator: tools/cli-validator.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/kitechsoftware/stability-flow
