@@ -1,0 +1,34 @@
+version: "3"
+
+tasks:
+  build-image-docs:
+    cmds:
+      - ./scripts/build-image-docs.sh
+
+  build-image-validator:
+    cmds:
+      - ./scripts/build-image-cli-validator.sh
+
+  run-image-validator:
+    cmds:
+      - ./scripts/run-image-cli-validator.sh {{.CLI_ARGS}}
+
+  run-image-docs:
+    cmds:
+      - ./scripts/run-image-docs.sh
+
+  test-image-docs:
+    cmds:
+      - ./scripts/test-image-docs.sh
+
+  test-image-validator:
+    cmds:
+      - ./scripts/test-image-cli-validator.sh
+
+  test-images:
+    cmds:
+      - ./scripts/test-images.sh
+
+  test-flow:
+    cmds:
+      - ./scripts/test-stability-flow.sh
