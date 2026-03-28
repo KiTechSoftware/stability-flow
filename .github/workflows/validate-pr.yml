@@ -20,6 +20,11 @@ on:
         required: false
         default: text
         type: string
+      github-summary:
+        description: "Append validator output to the GitHub Actions job summary"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   enforce:
@@ -33,6 +38,7 @@ jobs:
           command: validate-branch-name
           branch: ${{ inputs.source }}
           format: ${{ inputs.format }}
+          github-summary: ${{ inputs.github-summary }}
 
       - name: Validate target branch name
         uses: KiTechSoftware/stability-flow@main
@@ -40,6 +46,7 @@ jobs:
           command: validate-branch-name
           branch: ${{ inputs.target }}
           format: ${{ inputs.format }}
+          github-summary: ${{ inputs.github-summary }}
 
       - name: Validate merge path
         uses: KiTechSoftware/stability-flow@main
@@ -48,6 +55,7 @@ jobs:
           source: ${{ inputs.source }}
           target: ${{ inputs.target }}
           format: ${{ inputs.format }}
+          github-summary: ${{ inputs.github-summary }}
 
       - name: Validate PR title as squash commit
         uses: KiTechSoftware/stability-flow@main
@@ -56,3 +64,4 @@ jobs:
           message: ${{ inputs.title }}
           mode: squash
           format: ${{ inputs.format }}
+          github-summary: ${{ inputs.github-summary }}

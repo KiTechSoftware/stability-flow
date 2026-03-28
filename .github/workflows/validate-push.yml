@@ -16,6 +16,11 @@ on:
         required: false
         default: text
         type: string
+      github-summary:
+        description: "Append validator output to the GitHub Actions job summary"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   enforce:
@@ -29,6 +34,7 @@ jobs:
           command: validate-branch-name
           branch: ${{ inputs.branch }}
           format: ${{ inputs.format }}
+          github-summary: ${{ inputs.github-summary }}
 
       - name: Validate pushed commit message
         uses: KiTechSoftware/stability-flow@main
@@ -37,3 +43,4 @@ jobs:
           message: ${{ inputs.message }}
           mode: work
           format: ${{ inputs.format }}
+          github-summary: ${{ inputs.github-summary }}
