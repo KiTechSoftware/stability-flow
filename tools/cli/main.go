@@ -11,90 +11,115 @@ import (
 	"stability-flow/internal/rules"
 )
 
-func main() {
-	if len(os.Args) < 2 {
-		usage()
-		os.Exit(2)
-	}
+type globalArgs struct {
+	command string
+	branch  string
+	base    string
+	source  string
+	target  string
+	message string
+	mode    string
+	format  string
+}
 
-	switch os.Args[1] {
+func main() {
+	args := parseArgs()
+
+	switch args.command {
 	case "validate-merge":
-		validateMerge(os.Args[2:])
+		validateMerge(args)
 	case "validate-origin":
-		validateOrigin(os.Args[2:])
+		validateOrigin(args)
 	case "validate-commit":
-		validateCommit(os.Args[2:])
+		validateCommit(args)
 	case "validate-branch-name":
-		validateBranchName(os.Args[2:])
+		validateBranchName(args)
 	default:
 		usage()
 		os.Exit(2)
 	}
 }
 
-func validateMerge(args []string) {
-	fs := flag.NewFlagSet("validate-merge", flag.ExitOnError)
-	source := fs.String("source", "", "source branch")
-	target := fs.String("target", "", "target branch")
-	formatValue := fs.String("format", "text", "output format: text, json, jsonl, markdown")
-	fs.Parse(args)
+func parseArgs() globalArgs {
+	if len(os.Args) < 2 {
+		usage()
+		os.Exit(2)
+	}
 
-	if *source == "" || *target == "" {
+	command := os.Args[1]
+
+	fs := flag.NewFlagSet(command, flag.ContinueOnError)
+	fs.SetOutput(os.Stderr)
+
+	branchName := fs.String("branch", "", "branch name for validate-branch-name or branch being created for validate-origin")
+	base := fs.String("base", "", "base branch for validate-origin")
+	source := fs.String("source", "", "source branch for validate-merge")
+	target := fs.String("target", "", "target branch for validate-merge")
+	message := fs.String("message", "", "commit message for validate-commit")
+	mode := fs.String("mode", "squash", "validation mode: work or squash")
+	formatValue := fs.String("format", "text", "output format: text, json, jsonl, markdown")
+
+	if err := fs.Parse(os.Args[2:]); err != nil {
+		failUsage(err.Error())
+	}
+
+	return globalArgs{
+		command: command,
+		branch:  *branchName,
+		base:    *base,
+		source:  *source,
+		target:  *target,
+		message: *message,
+		mode:    *mode,
+		format:  *formatValue,
+	}
+}
+
+func validateMerge(args globalArgs) {
+	if args.source == "" || args.target == "" {
 		failUsage("--source and --target are required")
 	}
 
-	format := mustParseFormat(*formatValue)
+	format := mustParseFormat(args.format)
 
-	ok, reason := rules.ValidateMerge(*source, *target)
+	ok, reason := rules.ValidateMerge(args.source, args.target)
 	renderAndExit(format, output.ValidationResult{
 		OK:      ok,
 		Command: "validate-merge",
 		Reason:  reason,
 		Fields: map[string]string{
-			"source": *source,
-			"target": *target,
+			"source": args.source,
+			"target": args.target,
 		},
 	})
 }
 
-func validateOrigin(args []string) {
-	fs := flag.NewFlagSet("validate-origin", flag.ExitOnError)
-	branchName := fs.String("branch", "", "branch being created")
-	base := fs.String("base", "", "base branch")
-	formatValue := fs.String("format", "text", "output format: text, json, jsonl, markdown")
-	fs.Parse(args)
-
-	if *branchName == "" || *base == "" {
+func validateOrigin(args globalArgs) {
+	if args.branch == "" || args.base == "" {
 		failUsage("--branch and --base are required")
 	}
 
-	format := mustParseFormat(*formatValue)
+	format := mustParseFormat(args.format)
 
-	ok, reason := rules.ValidateOrigin(*branchName, *base)
+	ok, reason := rules.ValidateOrigin(args.branch, args.base)
 	renderAndExit(format, output.ValidationResult{
 		OK:      ok,
 		Command: "validate-origin",
 		Reason:  reason,
 		Fields: map[string]string{
-			"branch": *branchName,
-			"base":   *base,
+			"branch": args.branch,
+			"base":   args.base,
 		},
 	})
 }
 
-func validateCommit(args []string) {
-	fs := flag.NewFlagSet("validate-commit", flag.ExitOnError)
-	message := fs.String("message", "", "commit message")
-	mode := fs.String("mode", "squash", "validation mode: work or squash")
-	formatValue := fs.String("format", "text", "output format: text, json, jsonl, markdown")
-	fs.Parse(args)
-
-	if *message == "" {
+func validateCommit(args globalArgs) {
+	if args.message == "" {
 		failUsage("--message is required")
 	}
 
 	var commitMode commit.Mode
-	switch *mode {
+	switch args.mode {
 	case "work":
 		commitMode = commit.ModeWork
 	case "squash":
@@ -103,39 +128,34 @@ func validateCommit(args []string) {
 		failUsage("--mode must be one of: work, squash")
 	}
 
-	format := mustParseFormat(*formatValue)
+	format := mustParseFormat(args.format)
 
-	ok, reason := commit.Validate(*message, commitMode)
+	ok, reason := commit.Validate(args.message, commitMode)
 	renderAndExit(format, output.ValidationResult{
 		OK:      ok,
 		Command: "validate-commit",
 		Reason:  reason,
 		Fields: map[string]string{
-			"message": *message,
-			"mode":    *mode,
+			"message": args.message,
+			"mode":    args.mode,
 		},
 	})
 }
 
-func validateBranchName(args []string) {
-	fs := flag.NewFlagSet("validate-branch-name", flag.ExitOnError)
-	name := fs.String("branch", "", "branch name")
-	formatValue := fs.String("format", "text", "output format: text, json, jsonl, markdown")
-	fs.Parse(args)
-
-	if *name == "" {
+func validateBranchName(args globalArgs) {
+	if args.branch == "" {
 		failUsage("--branch is required")
 	}
 
-	format := mustParseFormat(*formatValue)
+	format := mustParseFormat(args.format)
 
-	ok, reason := branch.ValidateName(*name)
+	ok, reason := branch.ValidateName(args.branch)
 	renderAndExit(format, output.ValidationResult{
 		OK:      ok,
 		Command: "validate-branch-name",
 		Reason:  reason,
 		Fields: map[string]string{
-			"branch": *name,
+			"branch": args.branch,
 		},
 	})
 }
