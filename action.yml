@@ -29,23 +29,90 @@ inputs:
     description: "CLI output format: text, json, jsonl, markdown"
     required: false
     default: text
+  github-summary:
+    description: "Append formatted output to GITHUB_STEP_SUMMARY when available"
+    required: false
+    default: "false"
 
 runs:
-  using: docker
-  image: docker://ghcr.io/kitechsoftware/stability-flow-validator:latest
-  args:
-    - ${{ inputs.command }}
-    - --branch
-    - ${{ inputs.branch }}
-    - --base
-    - ${{ inputs.base }}
-    - --source
-    - ${{ inputs.source }}
-    - --target
-    - ${{ inputs.target }}
-    - --message
-    - ${{ inputs.message }}
-    - --mode
-    - ${{ inputs.mode }}
-    - --format
-    - ${{ inputs.format }}
+  using: composite
+  steps:
+    - name: Pull validator image
+      shell: bash
+      run: |
+        set -euo pipefail
+        docker pull ghcr.io/kitechsoftware/stability-flow-validator:latest
+
+    - name: Run validator
+      shell: bash
+      env:
+        INPUT_COMMAND: ${{ inputs.command }}
+        INPUT_BRANCH: ${{ inputs.branch }}
+        INPUT_BASE: ${{ inputs.base }}
+        INPUT_SOURCE: ${{ inputs.source }}
+        INPUT_TARGET: ${{ inputs.target }}
+        INPUT_MESSAGE: ${{ inputs.message }}
+        INPUT_MODE: ${{ inputs.mode }}
+        INPUT_FORMAT: ${{ inputs.format }}
+        INPUT_GITHUB_SUMMARY: ${{ inputs.github-summary }}
+      run: |
+        set +e
+
+        args=()
+        args+=("$INPUT_COMMAND")
+
+        if [[ -n "${INPUT_BRANCH}" ]]; then
+          args+=("--branch" "$INPUT_BRANCH")
+        fi
+
+        if [[ -n "${INPUT_BASE}" ]]; then
+          args+=("--base" "$INPUT_BASE")
+        fi
+
+        if [[ -n "${INPUT_SOURCE}" ]]; then
+          args+=("--source" "$INPUT_SOURCE")
+        fi
+
+        if [[ -n "${INPUT_TARGET}" ]]; then
+          args+=("--target" "$INPUT_TARGET")
+        fi
+
+        if [[ -n "${INPUT_MESSAGE}" ]]; then
+          args+=("--message" "$INPUT_MESSAGE")
+        fi
+
+        if [[ -n "${INPUT_MODE}" ]]; then
+          args+=("--mode" "$INPUT_MODE")
+        fi
+
+        if [[ -n "${INPUT_FORMAT}" ]]; then
+          args+=("--format" "$INPUT_FORMAT")
+        fi
+
+        OUTPUT="$(
+          docker run --rm \
+            ghcr.io/kitechsoftware/stability-flow-validator:latest \
+            "${args[@]}" 2>&1
+        )"
+        STATUS=$?
+
+        printf '%s\n' "$OUTPUT"
+
+        if [[ "${INPUT_GITHUB_SUMMARY}" == "true" && -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+          {
+            echo "## Stability Flow Validation"
+            echo
+
+            if [[ "${INPUT_FORMAT}" == "markdown" ]]; then
+              printf '%s\n' "$OUTPUT"
+            else
+              echo '```text'
+              printf '%s\n' "$OUTPUT"
+              echo '```'
+            fi
+
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+        exit "$STATUS"
