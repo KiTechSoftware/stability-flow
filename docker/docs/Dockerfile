@@ -7,7 +7,7 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 COPY mkdocs.yml /site/mkdocs.yml
 COPY docs /site/docs
-COPY assets /site/assets
+COPY assets /site/docs/assets
 
 RUN mkdocs build --strict
 
