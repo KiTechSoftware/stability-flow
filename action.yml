@@ -1,7 +1,5 @@
 name: Stability Flow
-
 description: Run Stability Flow CLI validations for branch names, merge targets, branch origins, and commit messages.
-
 author: KiTechSoftware
 
 inputs:
@@ -31,10 +29,6 @@ inputs:
     description: "CLI output format: text, json, jsonl, markdown"
     required: false
     default: text
-  image:
-    description: "Validator container image to run"
-    required: false
-    default: ghcr.io/kitechsoftware/stability-flow-validator:latest
 
 runs:
   using: docker
