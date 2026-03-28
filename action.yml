@@ -99,8 +99,34 @@ runs:
         printf '%s\n' "$OUTPUT"
 
         if [[ "${INPUT_GITHUB_SUMMARY}" == "true" && -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+          case "${INPUT_COMMAND}" in
+            validate-branch-name)
+              if [[ -n "${INPUT_BRANCH}" ]]; then
+                SUMMARY_TITLE="Branch validation: \`${INPUT_BRANCH}\`"
+              else
+                SUMMARY_TITLE="Branch validation"
+              fi
+              ;;
+            validate-merge)
+              SUMMARY_TITLE="Merge validation: \`${INPUT_SOURCE}\` → \`${INPUT_TARGET}\`"
+              ;;
+            validate-origin)
+              SUMMARY_TITLE="Origin validation: \`${INPUT_BRANCH}\` from \`${INPUT_BASE}\`"
+              ;;
+            validate-commit)
+              if [[ "${INPUT_MODE}" == "squash" ]]; then
+                SUMMARY_TITLE="PR title validation"
+              else
+                SUMMARY_TITLE="Commit message validation"
+              fi
+              ;;
+            *)
+              SUMMARY_TITLE="Stability Flow Validation"
+              ;;
+          esac
+
           {
-            echo "## Stability Flow Validation"
+            echo "### ${SUMMARY_TITLE}"
             echo
 
             if [[ "${INPUT_FORMAT}" == "markdown" ]]; then
@@ -116,3 +142,4 @@ runs:
         fi
 
         exit "$STATUS"
+        
