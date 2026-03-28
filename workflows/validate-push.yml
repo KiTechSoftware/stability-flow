@@ -24,14 +24,14 @@ jobs:
 
     steps:
       - name: Validate pushed branch name
-        uses: KiTechSoftware/stability-flow@v1
+        uses: KiTechSoftware/stability-flow@main
         with:
           command: validate-branch-name
           branch: ${{ inputs.branch }}
           format: ${{ inputs.format }}
 
       - name: Validate pushed commit message
-        uses: KiTechSoftware/stability-flow@v1
+        uses: KiTechSoftware/stability-flow@main
         with:
           command: validate-commit
           message: ${{ inputs.message }}

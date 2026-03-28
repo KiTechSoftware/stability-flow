@@ -28,21 +28,21 @@ jobs:
 
     steps:
       - name: Validate source branch name
-        uses: KiTechSoftware/stability-flow@v1
+        uses: KiTechSoftware/stability-flow@main
         with:
           command: validate-branch-name
           branch: ${{ inputs.source }}
           format: ${{ inputs.format }}
 
       - name: Validate target branch name
-        uses: KiTechSoftware/stability-flow@v1
+        uses: KiTechSoftware/stability-flow@main
         with:
           command: validate-branch-name
           branch: ${{ inputs.target }}
           format: ${{ inputs.format }}
 
       - name: Validate merge path
-        uses: KiTechSoftware/stability-flow@v1
+        uses: KiTechSoftware/stability-flow@main
         with:
           command: validate-merge
           source: ${{ inputs.source }}
@@ -50,7 +50,7 @@ jobs:
           format: ${{ inputs.format }}
 
       - name: Validate PR title as squash commit
-        uses: KiTechSoftware/stability-flow@v1
+        uses: KiTechSoftware/stability-flow@main
         with:
           command: validate-commit
           message: ${{ inputs.title }}
