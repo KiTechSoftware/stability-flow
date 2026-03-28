@@ -1,0 +1,57 @@
+name: Stability Flow
+
+description: Run Stability Flow CLI validations for branch names, merge targets, branch origins, and commit messages.
+
+author: KiTechSoftware
+
+inputs:
+  command:
+    description: "CLI command: validate-merge, validate-origin, validate-commit, or validate-branch-name"
+    required: true
+  branch:
+    description: "Branch name for validate-branch-name or validate-origin"
+    required: false
+  base:
+    description: "Base branch for validate-origin"
+    required: false
+  source:
+    description: "Source branch for validate-merge"
+    required: false
+  target:
+    description: "Target branch for validate-merge"
+    required: false
+  message:
+    description: "Commit message or PR title for validate-commit"
+    required: false
+  mode:
+    description: "Commit validation mode: work or squash"
+    required: false
+    default: squash
+  format:
+    description: "CLI output format: text, json, jsonl, markdown"
+    required: false
+    default: text
+  image:
+    description: "Validator container image to run"
+    required: false
+    default: ghcr.io/kitechsoftware/stability-flow-validator:latest
+
+runs:
+  using: docker
+  image: docker://ghcr.io/kitechsoftware/stability-flow-validator:latest
+  args:
+    - ${{ inputs.command }}
+    - --branch
+    - ${{ inputs.branch }}
+    - --base
+    - ${{ inputs.base }}
+    - --source
+    - ${{ inputs.source }}
+    - --target
+    - ${{ inputs.target }}
+    - --message
+    - ${{ inputs.message }}
+    - --mode
+    - ${{ inputs.mode }}
+    - --format
+    - ${{ inputs.format }}
