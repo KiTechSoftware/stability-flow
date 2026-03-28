@@ -2,7 +2,6 @@ package rules
 
 import (
 	"fmt"
-	"strings"
 
 	"stability-flow/internal/branch"
 )
@@ -30,6 +29,11 @@ func ValidateMerge(source, target string) (bool, string) {
 	// release/* -> main
 	if sourceType == branch.TypeRelease && targetType == branch.TypeMain {
 		return true, "only release/* may merge into main, using fast-forward only"
+	}
+
+	// main -> sync/*
+	if sourceType == branch.TypeMain && targetType == branch.TypeSync {
+		return true, "main may merge only into sync/* for reconciliation, using a regular merge commit"
 	}
 
 	// sync/* -> develop
@@ -93,12 +97,15 @@ func ValidateOrigin(branchName, base string) (bool, string) {
 		return false, "sync/* must branch from develop"
 	}
 
-	// wip/* is exploratory only
+	// wip/* may branch from develop or main for temporary exploration, but they are not integration branches and are not mergeable under Stability Flow
 	if branchType == branch.TypeWIP {
-		if strings.TrimSpace(base) == "" {
-			return false, "wip/* still requires a valid base branch"
+		if baseType == branch.TypeDevelop {
+			return true, "wip/* may be created from develop for temporary exploration"
 		}
-		return true, "wip/* is exploratory only; any accepted implementation must be recreated through the correct branch type"
+		if baseType == branch.TypeMain {
+			return true, "wip/* may be created from main for hotfix troubleshooting"
+		}
+		return false, "wip/* must branch from develop, or from main when used for hotfix troubleshooting"
 	}
 
 	// main/develop should not be created

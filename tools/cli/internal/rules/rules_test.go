@@ -12,6 +12,7 @@ func TestValidateMerge(t *testing.T) {
 		{"feat to develop", "feat/add-auth", "develop", true},
 		{"fix to develop", "fix/payment-null", "develop", true},
 		{"release to main", "release/1.2.3", "main", true},
+		{"main to sync", "main", "sync/main-into-develop-1.2.3", true},
 		{"sync to develop", "sync/main-into-develop-1.2.3", "develop", true},
 
 		{"feat to main blocked", "feat/add-auth", "main", false},
@@ -20,6 +21,7 @@ func TestValidateMerge(t *testing.T) {
 		{"hotfix to main blocked", "hotfix/1.2.4", "main", false},
 		{"hotfix to develop blocked", "hotfix/1.2.4", "develop", false},
 		{"release to develop blocked", "release/1.2.3", "develop", false},
+		{"main to release blocked", "main", "release/1.2.3", false},
 	}
 
 	for _, tt := range tests {
@@ -46,6 +48,7 @@ func TestValidateOrigin(t *testing.T) {
 		{"release from hotfix", "release/1.2.4", "hotfix/1.2.4", true},
 		{"sync from develop", "sync/main-into-develop-1.2.4", "develop", true},
 		{"wip from develop", "wip/explore-auth", "develop", true},
+		{"wip from main", "wip/explore-prod-issue", "main", true},
 
 		{"feat from main blocked", "feat/add-auth", "main", false},
 		{"hotfix from develop blocked", "hotfix/1.2.4", "develop", false},

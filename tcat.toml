@@ -3,3 +3,6 @@ extensions = ["sh"]
 
 [scripts.md]
 extensions = ["md"]
+
+[scripts.go]
+extensions = ["go"]
