@@ -1,13 +1,13 @@
 site_name: Stability Flow
-site_description: A branching strategy specification for stable releases, safe hotfixes, and explicit reintegration.
+site_description: A branching strategy specification for stable releases, safe hotfixes, and explicit reconciliation.
 site_url: https://stability-flow.kitechsoftware.com/
 repo_url: https://github.com/kitechsoftware/stability-flow
 repo_name: kitechsoftware/stability-flow
 
 theme:
   name: material
-  favicon: assets/img/logo.png
   logo: assets/img/logo.png
+  favicon: assets/img/logo.png
   features:
     - navigation.tabs
     - navigation.sections
@@ -38,11 +38,12 @@ nav:
   - Home: index.md
   - Specification:
       - Spec: spec.md
+      - Conventions: conventions.md
       - Release Flow: release-flow.md
       - Enforcement: enforcement.md
       - Design: design.md
   - Maintainers:
-      - Maintainer Notes: maintainer-notes.md
+      - Maintainer Guide: maintainer-guide.md
   - Tools:
       - CLI Validator: tools/cli-validator.md
 
@@ -63,6 +64,7 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.highlight:
       anchor_linenums: true
+      pygments_lang_class: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.tabbed:
@@ -71,6 +73,9 @@ markdown_extensions:
 plugins:
   - search
 
+extra_css:
+  - assets/styles/extra.css
+  
 extra:
   social:
     - icon: fontawesome/brands/github

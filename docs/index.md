@@ -21,9 +21,9 @@ At a high level:
 - production stays protected on `main`
 - only `release/*` may promote into `main`
 - hotfixes start from `main`
-- production changes must come back into `develop`
+- production changes return to `develop` through `sync/*`
 
-This makes the path to production clearer and keeps hotfix behavior predictable.
+This keeps the path to production clearer and makes hotfix and reconciliation behavior more predictable.
 
 ---
 
@@ -41,10 +41,14 @@ gitGraph
    checkout main
    merge release/1.0.0 tag: "v1.0.0"
    checkout develop
+   branch sync/main-into-develop-1.0.0
+   checkout sync/main-into-develop-1.0.0
    merge main
+   checkout develop
+   merge sync/main-into-develop-1.0.0
 ```
 
-Planned work flows through `develop`, promotion happens through `release/*`, and production changes are brought back into the development line.
+Planned work flows through `develop`, promotion happens through `release/*`, and production changes are reconciled back into the future development line through `sync/*`.
 
 ---
 
@@ -52,17 +56,17 @@ Planned work flows through `develop`, promotion happens through `release/*`, and
 
 Stability Flow is useful when your team needs to balance:
 
-* **ongoing development**
-* **planned releases**
-* **urgent production hotfixes**
-* **clear promotion boundaries**
+- **ongoing development**
+- **planned releases**
+- **urgent production hotfixes**
+- **clear promotion boundaries**
 
-It is especially helpful if you want:
+It is especially useful if you want:
 
-* stronger protection around `main`
-* explicit release promotion
-* safer handling of production divergence
-* a workflow that can be validated by policy and tooling
+- stronger protection around `main`
+- explicit release promotion
+- safer handling of production divergence
+- a workflow that can be validated by policy and tooling
 
 ---
 
@@ -82,7 +86,7 @@ Hotfixes start from `main`, not from ongoing development.
 
 ### Required Reintegration
 
-Production changes must come back into `develop` after release.
+Production changes return to `develop` through `sync/*` after release.
 
 ### Enforceable Structure
 
@@ -90,31 +94,37 @@ Branch roles and promotion paths are intentionally designed to be clear and mach
 
 ---
 
-## Read the Docs
+## Documentation
 
 ### Specification
 
-Start here if you want the full standard:
+Start here for the normative branching model:
 
-* [Specification](spec.md)
+- [Specification](spec.md)
+
+### Conventions
+
+Read this for branch naming and commit conventions:
+
+- [Conventions](conventions.md)
 
 ### Design
 
-Read this if you want the rationale and tradeoffs:
+Read this for the rationale, design goals, and tradeoffs:
 
-* [Design](design.md)
+- [Design](design.md)
 
 ### Release Examples
 
-Read this if you want worked examples and git graphs:
+Read this for worked examples and git graphs:
 
-* [Release Flow](release-flow.md)
+- [Release Flow](release-flow.md)
 
 ### Enforcement
 
-Read this if you want to understand how Stability Flow can be enforced:
+Read this for validation surfaces and enforcement guidance:
 
-* [Enforcement](enforcement.md)
+- [Enforcement](enforcement.md)
 
 ---
 
@@ -124,11 +134,11 @@ Stability Flow is a specification first.
 
 Tooling is optional.
 
-This project may include reference tooling and integrations to help teams adopt or enforce the specification, including validators and CI/CD integrations.
+Reference tooling may exist to help teams adopt or validate the model, but tooling is not the definition of the model.
 
-Tooling and implementation docs live under:
+If present, tooling and implementation-specific documentation live under:
 
-* [Tools](tools/cli-validator.md)
+- [Tools](tools/cli-validator.md)
 
 ---
 
@@ -138,4 +148,4 @@ Stability Flow is built around a simple idea:
 
 > keep production safe, make promotion explicit, and treat reintegration as a first-class part of the workflow.
 
-If that is the shape of workflow your team needs, start with the specification.
+If that matches the shape of workflow your team needs, start with the specification.

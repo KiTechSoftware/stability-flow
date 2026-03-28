@@ -2,37 +2,38 @@
 
 ## 1. Overview
 
-The Stability Flow CLI Validator is a reference tool for validating whether a repository workflow follows the Stability Flow specification.
+The Stability Flow CLI Validator is a **reference implementation** for validating whether a repository workflow follows the Stability Flow specification.
 
-It is intended to help teams validate:
+It is intended to help teams validate high-value, machine-checkable rules such as:
 
-- branch names
-- branch origins
+- branch naming
+- branch origin
 - merge eligibility
-- commit messages
+- final squash commit messages
 
-This tool is a **reference implementation** of parts of the Stability Flow specification.
+This tool is an **implementation of the Stability Flow specification**.
 
 It is **not** the specification itself.
 
-For the normative rules, see the specification.
+For the normative rules, see the Stability Flow specification.
 
 ---
 
 ## 2. What It Validates
 
-The CLI validator is designed to validate high-value, machine-checkable workflow rules.
+The CLI validator is designed to validate the parts of Stability Flow that are most valuable to enforce automatically.
 
 These include:
 
 - branch naming conventions
 - allowed branch origins
 - allowed merge targets
-- commit message structure
+- final squash commit message structure
+- breaking change notation in final squash commits
 
 This makes it useful for:
 
-- local development checks
+- local workflow checks
 - pull request validation
 - CI enforcement
 - reusable workflow integration
@@ -42,7 +43,7 @@ This makes it useful for:
 
 ## 3. Scope
 
-The CLI validator is intentionally focused on validation only.
+The CLI validator is intentionally focused on **validation only**.
 
 It does **not**:
 
@@ -51,8 +52,9 @@ It does **not**:
 - perform merges
 - rewrite commits
 - automate releases
+- decide whether a change is “worthy” of a release or hotfix
 
-Its purpose is to tell you whether a proposed action is valid according to the Stability Flow rules it implements.
+Its purpose is to tell you whether a proposed branch, merge, or final squash commit is valid according to the Stability Flow rules it implements.
 
 ---
 
@@ -60,41 +62,41 @@ Its purpose is to tell you whether a proposed action is valid according to the S
 
 The CLI currently supports the following validation commands.
 
-### Branch Name Validation
+### 4.1. Branch Name Validation
 
 Validates whether a branch name matches the expected Stability Flow naming model.
 
-```bash id="uw1a3q"
+```bash
 stability-flow-validator validate-branch-name --branch feat/add-authentication
-````
+```
 
 ---
 
-### Branch Origin Validation
+### 4.2. Branch Origin Validation
 
 Validates whether a branch was created from an allowed base branch.
 
-```bash id="whb5h8"
+```bash
 stability-flow-validator validate-origin --branch hotfix/1.2.4 --base main
 ```
 
 ---
 
-### Merge Validation
+### 4.3. Merge Validation
 
 Validates whether a source branch is allowed to merge into a target branch.
 
-```bash id="5rtuzl"
-stability-flow-validator validate-merge --source release/1.2.3 --target main
+```bash
+stability-flow-validator validate-merge --source release/1.2.4 --target main
 ```
 
 ---
 
-### Commit Validation
+### 4.4. Commit Validation
 
-Validates whether a commit message matches the configured commit rules.
+Validates whether a commit message matches the Stability Flow commit rules.
 
-```bash id="r52bdb"
+```bash
 stability-flow-validator validate-commit --mode squash --message "feat: complete validator v1"
 ```
 
@@ -102,33 +104,34 @@ stability-flow-validator validate-commit --mode squash --message "feat: complete
 
 ## 5. Branch Name Validation
 
-### Purpose
+### 5.1. Purpose
 
 Branch name validation checks whether a branch follows the expected Stability Flow branch naming conventions.
 
-### Example valid names
+### 5.2. Example valid names
 
-```text id="5vp4dy"
+```text
 feat/add-authentication
 fix/race-on-authentication
 docs/update-release-policy
 ci/add-validator-check
 refactor/simplify-branch-rules
 chore/update-dependencies
+wip/auth-investigation
 hotfix/1.2.4
 release/1.3.0
-sync/main-into-develop
+sync/main-into-develop-1.2.4
 ```
 
-### Example
+### 5.3. Example
 
-```bash id="if8xyj"
+```bash
 stability-flow-validator validate-branch-name --branch feat/add-authentication
 ```
 
-### Example result
+### 5.4. Example result
 
-```text id="m5h3f2"
+```text
 PASS: branch name allowed: feat/add-authentication
 reason: valid branch type: feat
 ```
@@ -137,125 +140,213 @@ reason: valid branch type: feat
 
 ## 6. Branch Origin Validation
 
-### Purpose
+### 6.1. Purpose
 
 Branch origin validation checks whether a branch was created from an allowed base branch.
 
-Examples:
+### 6.2. Expected origin behavior
 
-* regular work branches should come from `develop`
-* `hotfix/*` should come from `main`
-* `release/*` should come from `develop` or `hotfix/*`
+- regular work branches must come from `develop`
+- `wip/*` may come from `develop`
+- `wip/*` may come from `main` for hotfix troubleshooting
+- `wip/*` is never mergeable
+- `hotfix/*` must come from `main`
+- `release/*` must come from `develop` or `hotfix/*`
+- `sync/*` must come from `develop`
 
-### Example
+### 6.3. Example valid origin
 
-```bash id="sagqxh"
+```bash
 stability-flow-validator validate-origin --branch hotfix/1.2.4 --base main
 ```
 
-### Example result
+### 6.4. Example result
 
-```text id="st0y9n"
+```text
 PASS: branch origin allowed: hotfix/1.2.4 from main
 reason: hotfix/* must be created from main
 ```
+
+### 6.5. Example invalid origin
+
+```bash
+stability-flow-validator validate-origin --branch feat/add-authentication --base main
+```
+
+### 6.6. Example result
+
+```text
+FAIL: branch origin not allowed: feat/add-authentication from main
+reason: regular work branches must be created from develop
+```
+
+### 6.7. Important note on `wip/*`
+
+`wip/*` branches may be created from `develop` or `main` for temporary exploration, but they are not integration branches and are not mergeable under Stability Flow.
+`wip/*` branches derived from `main` MUST be used ONLY for hotfix troubleshooting/exploration
 
 ---
 
 ## 7. Merge Validation
 
-### Purpose
+### 7.1. Purpose
 
 Merge validation checks whether a source branch is allowed to merge into a given target branch.
 
-Examples:
+### 7.2. Expected merge behavior
 
-* `feat/*` may merge into `develop`
-* `release/*` may merge into `main`
-* `feat/*` may not merge into `main`
+- regular work branches may merge into `develop`
+- `release/*` MUST merge into `main`
+- `sync/*` MUST merge into `develop`
+- `hotfix/*` MUST NOT merge directly into `main`
+- `wip/*` MUST NOT merge into any branch
+- direct `main` → `develop` merges are not allowed
 
-### Example valid merge
+### 7.3. Example valid merge
 
-```bash id="2xv47u"
-stability-flow-validator validate-merge --source release/1.2.3 --target main
+```bash
+stability-flow-validator validate-merge --source release/1.2.4 --target main
 ```
 
-### Example result
+### 7.4. Example result
 
-```text id="87h9rf"
-PASS: merge allowed: release/1.2.3 -> main
-reason: only release/* may merge into main, using fast-forward only
+```text
+PASS: merge allowed: release/1.2.4 -> main
+reason: only release/* may merge into main
 ```
 
-### Example invalid merge
+### 7.5. Example invalid merge
 
-```bash id="bq9r1k"
+```bash
 stability-flow-validator validate-merge --source feat/add-authentication --target main
 ```
 
-### Example result
+### 7.6. Example result
 
-```text id="ajblw9"
+```text
 FAIL: merge not allowed: feat/add-authentication -> main
-reason: merge not allowed by Stability Flow: feat -> main
+reason: merge not allowed by Stability Flow: regular work branches must not merge into main
+```
+
+### 7.7. Example invalid exploratory merge
+
+```bash
+stability-flow-validator validate-merge --source wip/auth-investigation --target develop
+```
+
+### 7.8. Example result
+
+```text
+FAIL: merge not allowed: wip/auth-investigation -> develop
+reason: wip/* branches are exploratory only and must never be merged
 ```
 
 ---
 
 ## 8. Commit Validation
 
-### Purpose
+### 8.1. Purpose
 
-Commit validation checks whether a commit message matches the expected commit format.
+Commit validation checks whether a commit message matches the Stability Flow rules for **final squash commits**.
 
 This is especially useful for:
 
-* squash merge commit messages
-* release preparation commits
-* CI validation
+- pull request squash merges
+- protected branch merge validation
+- CI enforcement
+- release review workflows
 
-### Example valid commit
+The validator is primarily concerned with the **final squash commit that enters `develop`**.
 
-```bash id="b7o6mo"
-stability-flow-validator validate-commit --mode squash --message "feat: complete validator v1"
-```
+It is not intended to police every intermediate commit in branch history.
 
-### Example result
+---
 
-```text id="hvtg8y"
-PASS: commit message allowed (squash): feat: complete validator v1
-reason: valid commit type: feat
-```
+### 8.2. Allowed Final Squash Commit Types
 
-### Example breaking change commit
+The validator accepts the following commit types for final squash commits:
 
-```bash id="w3w0q0"
-stability-flow-validator validate-commit --mode squash --message "feat!: remove legacy auth flow
+- `feat`
+- `fix`
+- `docs`
+- `ci`
+- `refactor`
+- `chore`
+- `test`
+- `perf`
+- `build`
+- `style`
 
-BREAKING CHANGE: legacy auth removed"
+#### 8.2.1 Example valid commits
+
+```text
+feat: add authentication flow
+fix: patch session race condition
+docs: clarify hotfix reconciliation
+chore: prepare release metadata
+test: add branch origin coverage
+perf: improve validator startup
 ```
 
 ---
 
-## 9. Commit Modes
+### 8.3 Breaking Changes
 
-The validator supports commit validation modes to reflect different workflow contexts.
+Breaking changes must be indicated by:
 
-### Example modes
+- `!` in the type header
 
-* squash
-* branch
-* release
+A `BREAKING CHANGE:` footer may also be used, but does not replace the required `!`.
 
-The exact supported modes may evolve as the validator grows.
+#### 8.3.1 Example valid breaking change commit
 
-The purpose of modes is to allow different commit expectations depending on the workflow event being validated.
+```text
+feat!: remove legacy auth flow
 
-Examples:
+BREAKING CHANGE: legacy auth flow removed
+```
 
-* a squash merge commit
-* a release preparation commit
-* a branch-local commit
+---
+
+### 8.4. Reverts
+
+The validator treats `revert:` differently depending on context.
+
+#### 8.4.1 Allowed
+
+- `revert:` may appear in branch-local history
+
+#### 8.4.2 Not allowed
+
+- `revert:` must not be used as the **final squash commit** entering `develop`
+
+#### 8.4.3 Example invalid final squash commit
+
+```text
+revert: undo previous change
+```
+
+---
+
+## 9. Commit Validation Modes
+
+The validator may support different commit validation modes depending on workflow context.
+
+### 9.1 Common modes
+
+- `squash` — validates the final squash commit that will enter `develop`
+- `work` — validates ordinary work-branch commits, if enabled by implementation policy
+
+### 9.2 Important note
+
+The Stability Flow specification defines rules for **final squash commits**.
+
+Additional validation of ordinary branch-local commits is an implementation choice.
+
+That means:
+
+- `squash` mode reflects spec-level validation
+- other modes may exist for convenience or stricter workflow policy
 
 ---
 
@@ -263,57 +354,55 @@ Examples:
 
 The validator supports multiple output formats so it can be used by both humans and automation.
 
-### Supported formats
+### 10.1. Supported formats
 
-* `text`
-* `json`
-* `jsonl`
-* `markdown`
+- `text`
+- `json`
+- `jsonl`
+- `markdown`
 
-### Example
+#### 10.1.1 Example JSON output
 
-```bash id="zvf4e3"
-stability-flow-validator validate-merge --source release/1.2.3 --target main --format json
+```bash
+stability-flow-validator validate-merge --source release/1.2.4 --target main --format json
 ```
 
-### Example JSON output
-
-```json id="jsnnfk"
+```json
 {
   "ok": true,
   "command": "validate-merge",
-  "reason": "only release/* may merge into main, using fast-forward only",
+  "reason": "only release/* may merge into main",
   "fields": {
-    "source": "release/1.2.3",
+    "source": "release/1.2.4",
     "target": "main"
   }
 }
 ```
 
-### Example JSONL output
+#### 10.1.2 Example JSONL output
 
-```bash id="nwlxmr"
+```bash
 stability-flow-validator validate-origin --branch hotfix/1.2.4 --base main --format jsonl
 ```
 
-```json id="flr77a"
+```json
 {"ok":true,"command":"validate-origin","reason":"hotfix/* must be created from main","fields":{"base":"main","branch":"hotfix/1.2.4"}}
 ```
 
-### Example Markdown output
+#### 10.1.3 Example Markdown output
 
-```bash id="rj9wyy"
-stability-flow-validator validate-merge --source release/1.2.3 --target main --format markdown
+```bash
+stability-flow-validator validate-merge --source release/1.2.4 --target main --format markdown
 ```
 
-```md id="74xyxq"
+```md
 ## Stability Flow Validation Result
 
 - **Command:** `validate-merge`
 - **Status:** ✅ Passed
-- **Source:** `release/1.2.3`
+- **Source:** `release/1.2.4`
 - **Target:** `main`
-- **Reason:** only release/* may merge into main, using fast-forward only
+- **Reason:** only release/* may merge into main
 ```
 
 ---
@@ -324,15 +413,15 @@ The validator is designed to return a non-zero exit code when validation fails.
 
 This makes it suitable for:
 
-* shell scripting
-* CI pipelines
-* pre-push hooks
-* pull request validation
+- shell scripting
+- CI pipelines
+- pre-push hooks
+- pull request validation
 
-### General behavior
+### 11.1 General behavior
 
-* success → exit code `0`
-* validation failure → non-zero exit code
+- success → exit code `0`
+- validation failure → non-zero exit code
 
 ---
 
@@ -342,13 +431,13 @@ The validator can be used locally as a lightweight workflow safety check.
 
 Examples:
 
-* validate a branch before opening a pull request
-* validate a squash commit before merging
-* validate a hotfix branch origin before release work begins
+- validate a branch before opening a pull request
+- validate a squash commit before merging
+- validate a hotfix branch origin before release work begins
 
-### Example
+### 12.1 Example
 
-```bash id="4gw3w2"
+```bash
 stability-flow-validator validate-origin --branch release/1.2.4 --base hotfix/1.2.4
 ```
 
@@ -362,58 +451,62 @@ The validator is also intended to work well in automation.
 
 Common uses include:
 
-* validating branch names in pull requests
-* validating merge direction rules
-* validating commit messages
-* producing structured output for job summaries or machine parsing
+- validating branch names in pull requests
+- validating merge direction rules
+- validating final squash commit messages
+- producing structured output for job summaries or machine parsing
 
 The CLI is especially useful in CI because it supports machine-readable output formats.
 
 Examples:
 
-* `json`
-* `jsonl`
-* `markdown`
+- `json`
+- `jsonl`
+- `markdown`
 
 This allows teams to integrate it into:
 
-* GitHub Actions
-* reusable workflows
-* custom CI systems
-* release policy checks
+- CI pipelines
+- reusable workflows
+- repository policy checks
+- merge automation
 
 ---
 
-## 14. Reference Tooling Role
+## 14. Relationship to the Specification
 
-The CLI validator is one implementation of Stability Flow enforcement.
+The CLI validator is a **reference implementation** of the Stability Flow specification.
 
-It exists to help teams adopt and validate the specification more easily.
+That means:
+
+- it should follow the spec contract
+- it should not redefine the spec
+- it should not become the only way to adopt Stability Flow
 
 Teams may:
 
-* use it directly
-* wrap it in their own scripts
-* integrate it into CI
-* adapt its rules
-* build their own validator instead
+- use it directly
+- wrap it in their own scripts
+- integrate it into CI
+- extend it with internal policy
+- build their own validator instead
 
-The Stability Flow specification does not require this tool.
+The Stability Flow specification does **not** require this tool.
 
 ---
 
 ## 15. Summary
 
-The CLI validator provides a practical way to validate parts of the Stability Flow specification.
+The CLI validator provides a practical way to validate the machine-checkable parts of Stability Flow.
 
-It is useful when teams want machine-checkable validation for:
+It is especially useful for validating:
 
-* branch names
-* branch origins
-* merge eligibility
-* commit messages
+- branch names
+- branch origins
+- merge eligibility
+- final squash commit rules
 
 It is designed to support both:
 
-* human workflows
-* automation workflows
+- human workflows
+- automation workflows

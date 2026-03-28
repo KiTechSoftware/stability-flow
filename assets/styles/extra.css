@@ -1,0 +1,13 @@
+/* Mermaid readability tweaks for Material for MkDocs */
+
+/* Light mode */
+[data-md-color-scheme="default"] .mermaid {
+    --mermaid-font-family: var(--md-text-font);
+    --md-mermaid-label-fg-color: #f5f5f5;
+}
+
+/* Dark mode */
+[data-md-color-scheme="slate"] .mermaid {
+    --mermaid-font-family: var(--md-text-font);
+    --md-mermaid-label-fg-color: #0A0D0F;
+}

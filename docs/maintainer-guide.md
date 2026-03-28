@@ -1,10 +1,14 @@
-# Maintainer Notes
+# Maintainer Guide
 
-## 1. Overview
+## 1. Purpose
 
 This document provides guidance for maintaining the Stability Flow repository.
 
-It exists to help keep the project consistent as it evolves.
+Its purpose is to help preserve:
+
+- clear documentation boundaries
+- a stable public specification
+- clean separation between the model and its implementations
 
 Stability Flow is structured as:
 
@@ -12,11 +16,11 @@ Stability Flow is structured as:
 2. supporting **public documentation**
 3. optional **reference tooling and integrations**
 
-Maintainers should preserve that separation.
+Maintainers should preserve that separation as the project evolves.
 
 ---
 
-## 2. Project Structure Philosophy
+## 2. Repository Philosophy
 
 A core principle of this repository is:
 
@@ -25,27 +29,29 @@ A core principle of this repository is:
 This means:
 
 - the branching model is the product
-- tooling exists to help people adopt or enforce it
-- tooling must not redefine the specification
+- documentation exists to explain the model
+- tooling exists to help teams adopt or validate the model
+- tooling must not redefine the model
 
 This distinction should remain clear in both documentation and implementation.
 
 ---
 
-## 3. Documentation Boundaries
+## 3. Documentation Structure
 
-The documentation is intentionally split into two areas.
+The documentation is intentionally split by responsibility.
 
-### 3.1 `docs/`
+### 3.1 Public Documentation
 
 The root of `docs/` is for **specification-level and public concept documentation**.
 
-These documents describe the Stability Flow model itself.
+These documents describe Stability Flow itself.
 
 Examples:
 
 - `index.md`
 - `spec.md`
+- `conventions.md`
 - `design.md`
 - `release-flow.md`
 - `enforcement.md`
@@ -61,24 +67,24 @@ They should describe:
 - what Stability Flow is
 - how it works
 - why it is shaped this way
-- how it can be enforced in principle
+- how it can be validated in principle
 
 They should **not** become tool manuals.
 
 ---
 
-### 3.2 `docs/tools/`
+### 3.2 Tooling Documentation
 
 The `docs/tools/` directory is for **tooling and implementation documentation**.
 
-These documents describe tooling built to support the Stability Flow specification.
+These documents describe tools built to support Stability Flow.
 
 Examples:
 
 - CLI validator documentation
 - GitHub Actions documentation
 - reusable workflow documentation
-- future integration docs
+- integration docs
 
 These documents may describe:
 
@@ -93,11 +99,32 @@ They should not redefine the spec.
 
 ---
 
-## 4. Keep the Spec Tool-Neutral
+## 4. Documentation Boundaries
+
+Every important concept in the project should have **one canonical home**.
+
+That prevents drift and duplicate explanations.
+
+Use the following ownership model:
+
+| Concept                              | Canonical Home    |
+| ------------------------------------ | ----------------- |
+| branching rules                      | `spec.md`         |
+| naming and commit conventions        | `conventions.md`  |
+| rationale and tradeoffs              | `design.md`       |
+| validation and enforcement surfaces  | `enforcement.md`  |
+| worked examples and branch histories | `release-flow.md` |
+| tooling usage and integration        | `docs/tools/*`    |
+
+If a concept already has a clear home, update that document instead of repeating it elsewhere.
+
+---
+
+## 5. Keep the Specification Tool-Neutral
 
 The specification must remain independent of any single implementation.
 
-That means the following should **not** appear as normative language in the spec-level docs:
+That means the following should **not** appear as normative language in spec-level docs:
 
 - CLI command names
 - GitHub Action names
@@ -107,44 +134,62 @@ That means the following should **not** appear as normative language in the spec
 
 ### Bad pattern
 
-> “Use `validate-merge` to check whether a release branch may merge into main.”
+> “Use `validate-merge` to check whether a release branch may merge into `main`.”
 
 ### Better pattern
 
 > “Merge eligibility should be validated before protected branch integration.”
 
-The CLI or workflow docs can then explain how to do that with specific tooling.
+Implementation-specific docs can then explain how to do that with actual tooling.
 
 This distinction is important.
 
 ---
 
-## 5. Where New Documentation Should Go
+## 6. Where New Content Should Go
 
-When adding new documentation, maintainers should decide whether it belongs to the:
+When adding new content, maintainers should first decide what kind of content it is.
 
-- **specification**
-- **design rationale**
-- **enforcement guidance**
-- **tooling / implementation docs**
+### Add to `spec.md` if it answers
 
-### Use `docs/` when the content answers:
 - what is the rule?
-- why does the rule exist?
-- how does the flow work?
-- how can this be enforced in principle?
+- what branch movement is allowed?
+- what merge behavior is required?
 
-### Use `docs/tools/` when the content answers:
+### Add to `conventions.md` if it answers
+
+- how should branches be named?
+- how should final squash commits be formatted?
+- how should breaking changes or reverts be represented?
+
+### Add to `design.md` if it answers
+
+- why does this rule exist?
+- what tradeoff is the model making?
+- why is the workflow shaped this way?
+
+### Add to `enforcement.md` if it answers
+
+- what should be validated?
+- where can this be enforced?
+- how enforceable is this rule in practice?
+
+### Add to `release-flow.md` if it answers
+
+- what does this workflow look like in practice?
+- how does a release or hotfix actually move?
+
+### Add to `docs/tools/` if it answers
+
 - how does this tool work?
 - how do I run this validator?
-- how do I use this GitHub Action?
 - how do I integrate this workflow?
 
-This is the most important documentation boundary in the project.
+This is the most important documentation discipline in the repository.
 
 ---
 
-## 6. Specification Changes vs Tool Changes
+## 7. Specification Changes vs Tool Changes
 
 Not every tooling change is a specification change.
 
@@ -152,33 +197,32 @@ Not every specification change requires a tooling change.
 
 Maintainers should treat these as separate concerns.
 
----
-
-### 6.1 A Specification Change Usually Means
+### 7.1 A Specification Change Usually Means
 
 A specification change typically affects one or more of:
 
-- allowed branch roles
-- allowed branch origins
-- allowed merge targets
-- branch naming rules
+- branch roles
+- branch origins
+- merge targets
+- merge strategies
 - release behavior
 - hotfix behavior
-- reintegration behavior
+- reconciliation behavior
 - normative wording (`MUST`, `SHOULD`, etc.)
 
-These changes should usually update:
+These changes should usually update one or more of:
 
 - `docs/spec.md`
-- possibly `docs/design.md`
-- possibly `docs/release-flow.md`
-- possibly `docs/enforcement.md`
+- `docs/conventions.md`
+- `docs/design.md`
+- `docs/release-flow.md`
+- `docs/enforcement.md`
 
-They may also require tooling changes, but tooling should follow the spec, not lead it.
+Tooling should follow the specification, not lead it.
 
 ---
 
-### 6.2 A Tooling Change Usually Means
+### 7.2 A Tooling Change Usually Means
 
 A tooling change typically affects one or more of:
 
@@ -200,11 +244,11 @@ They do not automatically imply a spec change.
 
 ---
 
-## 7. Keep Reference Implementations Honest
+## 8. Keep Reference Implementations Honest
 
 Tooling in this repository should be presented as:
 
-# reference implementations
+> reference implementations
 
 That means maintainers should avoid language that implies:
 
@@ -212,25 +256,25 @@ That means maintainers should avoid language that implies:
 - the workflow requires this repository’s tooling
 - Stability Flow is inseparable from one CLI or CI implementation
 
-### Preferred framing
+Preferred framing includes:
 
-- “reference validator”
-- “reference tooling”
-- “example GitHub Actions integration”
-- “example reusable workflow”
+- reference validator
+- reference tooling
+- example GitHub Actions integration
+- example reusable workflow
 
 This keeps the project open and implementation-friendly.
 
 ---
 
-## 8. Repository Hygiene Expectations
+## 9. Repository Hygiene
 
 Maintainers should aim to keep the repository:
 
 - easy to navigate
 - explicit in purpose
 - low in duplication
-- clear in ownership of concepts
+- clear in concept ownership
 
 ### Recommended hygiene
 
@@ -239,10 +283,11 @@ Maintainers should aim to keep the repository:
 - avoid stale workflow diagrams
 - keep implementation docs separate from standard docs
 - prefer one canonical explanation of each concept
+- ensure workflow diagrams and examples reflect the canonical release and reconciliation path
 
 ---
 
-## 9. Scripts and Tooling Boundaries
+## 10. Scripts and Tooling Boundaries
 
 Scripts and tooling should follow the same separation principles as the docs.
 
@@ -254,7 +299,7 @@ Scripts and tooling should follow the same separation principles as the docs.
 - flow demo scripts demonstrate the branching model
 - validators validate policy
 
-### Avoid
+### Avoid in Tooling
 
 - mixing documentation generation concerns into validator tooling
 - making example scripts appear normative
@@ -264,27 +309,29 @@ This keeps the project easier to maintain.
 
 ---
 
-## 10. Documentation Maintenance Guidance
+## 11. Documentation Maintenance Guidance
 
 When updating docs:
 
 ### Prefer
+
 - short, explicit sections
 - consistent terminology
 - examples that reflect the current spec
 - diagrams that match real workflow behavior
 
 ### Avoid
+
 - over-explaining obvious Git concepts
 - mixing policy with implementation
-- conversational drift from earlier drafting
+- conversational drafting leftovers
 - “temporary” notes left in public docs
 
 If a concept already has a clear home, update that document instead of repeating it elsewhere.
 
 ---
 
-## 11. Versioning and Maturity
+## 12. Versioning and Maturity
 
 As the project evolves, maintainers should distinguish clearly between:
 
@@ -304,21 +351,24 @@ The maturity of one part of the project does not need to be artificially tied to
 
 ---
 
-## 12. Recommended Maintainer Checklist
+## 13. Maintainer Checklist
 
 When making changes, ask:
 
 ### Specification questions
+
 - does this change alter the rules of Stability Flow?
 - does it change branch behavior or release behavior?
-- does it need normative wording updates?
+- does it require normative wording updates?
 
 ### Documentation questions
+
 - is this the right document for this content?
 - am I duplicating an explanation that already exists?
 - is this still tool-neutral where it should be?
 
 ### Tooling questions
+
 - is this a reference implementation concern or a spec concern?
 - does this belong in `docs/tools/` instead?
 - does the implementation still match the spec?
@@ -327,7 +377,7 @@ This simple discipline will prevent most structural drift.
 
 ---
 
-## 13. Summary
+## 14. Summary
 
 The most important maintainer rule for this repository is:
 

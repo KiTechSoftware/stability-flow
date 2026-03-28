@@ -1,51 +1,45 @@
-# Enforcement
+# Stability Flow Enforcement
 
-## 1. Overview
+## 1. Purpose
 
-Stability Flow is a specification.
+This document explains how the Stability Flow specification can be **validated and enforced in practice**.
 
-It defines:
+The specification defines the branching model.
 
-- branch roles
-- allowed branch origins
-- allowed merge targets
-- promotion rules
-- reintegration expectations
-- naming and workflow conventions
+This document explains:
 
-This document describes **how those rules can be enforced**.
+- what parts of the model are practical to validate
+- where enforcement can happen
+- what kinds of checks are most valuable
+- where automation helps and where human review still matters
 
-It is intentionally **tool-neutral**.
+It is intentionally **implementation-neutral**.
 
-Teams may enforce Stability Flow through:
+For the normative branching model, see:
 
-- local developer tooling
-- Git hooks
-- pull request checks
-- CI pipelines
-- branch protection rules
-- reusable workflows
-- release automation
-- custom internal tooling
-- reference tooling provided by this project
+- [Specification](spec.md)
+
+For branch naming and commit conventions, see:
+
+- [Conventions](conventions.md)
 
 ---
 
 ## 2. Enforcement Philosophy
 
-The purpose of enforcement is not to make Git “more complicated”.
+The purpose of enforcement is not to make Git more complicated.
 
 The purpose is to make the workflow:
 
-- predictable
-- auditable
-- safer under pressure
-- easier to follow consistently
+- safer
+- more predictable
+- more auditable
+- easier to follow under pressure
 
 Good enforcement should:
 
 - prevent invalid branch movement
-- make intended branch roles explicit
+- preserve branch role meaning
 - reduce accidental policy drift
 - support review and automation
 - remain understandable to humans
@@ -53,256 +47,358 @@ Good enforcement should:
 Good enforcement should **not**:
 
 - hide the workflow behind opaque automation
-- make normal development painful
+- turn normal development into ceremony
 - rely entirely on tribal knowledge
-- depend on one specific vendor or platform
+- depend on one vendor, platform, or CI system
+
+The goal is not maximum restriction.
+
+The goal is preserving the integrity of the model.
 
 ---
 
-## 3. What Can Be Enforced
+## 3. What Enforcement Should Protect
 
-Some Stability Flow rules are easy to enforce automatically.
+Not every rule has equal operational value.
 
-Others are only partially enforceable and still require human review.
+The most useful enforcement protects the parts of Stability Flow that preserve its branching contract.
+
+High-value enforcement usually focuses on:
+
+- branch role integrity
+- promotion safety
+- reconciliation correctness
+- history shape
+- protected branch behavior
+
+These are the areas where invalid workflow behavior causes the most confusion or operational risk.
 
 ---
 
-## 4. High-Value Enforcement Targets
+## 4. High-Value Enforcement Surfaces
 
-The following rules are especially valuable to enforce.
-
-### 4.1 Branch Naming
+### 4.1. Branch Naming
 
 Branch naming is one of the easiest and highest-value checks.
 
-Examples:
+Branch names often communicate:
 
-```text id="c0yd3g"
-feat/add-authentication
-fix/race-on-authentication
-docs/update-release-policy
-hotfix/1.2.4
-release/1.3.0
-sync/main-into-develop
-```
+- branch role
+- intended workflow path
+- likely merge behavior
+- expected automation behavior
 
-#### Why enforce it
+#### 4.1.1 Why it matters
 
-Branch naming makes branch role explicit.
+A branch with an invalid or ambiguous name makes the rest of the workflow harder to reason about.
 
-It allows automation and reviewers to infer intent from branch identity.
+Naming is often the first signal used by:
 
-#### Typical enforcement points
+- reviewers
+- CI checks
+- repository policy
+- tooling
 
-* local hooks
-* CI checks
-* pull request validation
-* server-side Git hooks
+#### 4.1.2 Common validation targets
 
----
+Typical branch naming validation checks include:
 
-### 4.2 Branch Origin
+- valid prefix
+- valid format
+- lowercase naming
+- explicit branch intent
 
-Some branch types must be created from specific base branches.
+#### 4.1.3 Typical enforcement points
 
-Examples:
-
-* regular work branches should start from `develop`
-* `hotfix/*` should start from `main`
-* `release/*` should start from `develop` or `hotfix/*`
-
-#### Why enforce it
-
-A correctly named branch created from the wrong origin can still violate the flow.
-
-Example:
-
-* `hotfix/1.2.4` created from `develop` is structurally wrong even if the name looks valid
-
-#### Typical enforcement points
-
-* local tooling
-* CI validation
-* pull request checks
-* server-side Git hooks
-
-#### Important note
-
-Branch origin is often harder to validate than branch naming because it may require repository graph inspection rather than simple string matching.
+- local hooks
+- CI checks
+- pull request validation
+- server-side Git hooks
 
 ---
 
-### 4.3 Merge Eligibility
+### 4.2. Branch Origin
 
-Merge eligibility determines whether a source branch may merge into a given target branch.
+Branch origin is one of the most important structural checks in the model.
 
-Examples:
+A correctly named branch can still violate the workflow if it was created from the wrong source.
 
-* `feat/*` may merge into `develop`
-* `release/*` may merge into `main`
-* `hotfix/*` should not merge directly into `main`
+Examples of invalid branch origin include:
 
-#### Why enforce it
+- a hotfix branch created from `develop`
+- a release branch created from an exploratory branch
+- a regular work branch created from `main`
+
+#### 4.2.1. Why it matters
+
+Branch origin is what preserves the meaning of branch roles.
+
+If branch origins drift, the workflow may still *look* compliant while behaving incorrectly.
+
+#### 4.2.2. Common validation targets
+
+Typical branch origin checks include:
+
+- whether the branch ancestry includes the required source branch
+- whether the branch diverged from the correct branch family
+- whether disallowed origins are present
+
+#### 4.2.3. Typical enforcement points
+
+- local tooling
+- CI validation
+- pull request checks
+- server-side Git hooks
+
+#### Practical note
+
+Branch origin validation usually requires repository graph inspection rather than simple naming checks.
+
+That makes it slightly harder than branch naming, but still high-value.
+
+---
+
+### 4.3. Merge Eligibility
+
+Merge eligibility determines whether a source branch is allowed to merge into a given target branch.
 
 This is one of the most important controls in Stability Flow.
 
-It prevents invalid promotion paths.
+#### 4.3.1 Why it matters
 
-#### Typical enforcement points
+If invalid merge targets are allowed, the workflow can collapse even if branch names and origins are correct.
 
-* pull request checks
-* merge queue validation
-* CI validation
-* protected branch policies
-* custom merge automation
+This is what prevents:
 
----
+- regular work from bypassing `develop`
+- hotfixes from bypassing promotion rules
+- invalid reconciliation paths
+- exploratory branches from leaking into delivery flow
 
-### 4.4 Merge Strategy
+#### 4.3.2 Common validation targets
 
-The merge strategy matters because Stability Flow relies on branch history semantics.
+Typical merge eligibility checks include:
 
-Examples:
+- source branch type
+- target branch type
+- whether the transition is valid under the model
+- whether the merge path bypasses promotion or reconciliation rules
 
-* regular work into `develop` should usually be squash merged
-* `release/*` into `main` should usually be fast-forward only
-* reintegration into `develop` should usually preserve an explicit merge
+#### 4.3.3 Typical enforcement points
 
-#### Why enforce it
-
-The wrong merge strategy can preserve the branch target while still weakening the workflow.
-
-Example:
-
-* a merge commit from a feature branch into `develop` may technically “work”, but violates the intended history shape if squash merge is required by policy
-
-#### Typical enforcement points
-
-* repository branch protection
-* platform merge settings
-* PR workflow rules
-* custom merge automation
+- pull request checks
+- merge queue validation
+- CI validation
+- protected branch policy
+- custom merge automation
 
 ---
 
-### 4.5 Protected Branch Writes
+### 4.4. Merge Strategy
+
+Merge strategy is part of the workflow contract because Stability Flow uses history shape intentionally.
+
+A valid merge target with the wrong merge strategy can still weaken the model.
+
+#### 4.4.1 Why it matters
+
+Examples of invalid merge behavior include:
+
+- merge commits from regular work into `develop` when squash is expected
+- non-fast-forward promotion into `main`
+- reconciliation that loses its explicit merge history
+
+#### 4.4.2 Common validation targets
+
+Typical merge strategy checks include:
+
+- squash requirement for regular work
+- fast-forward requirement for promotion
+- merge-commit preservation for reconciliation
+
+#### 4.4.3 Typical enforcement points
+
+- repository branch protection
+- platform merge settings
+- merge queue rules
+- custom merge automation
+
+---
+
+### 4.5. Protected Branch Writes
 
 Some branches should be protected from direct mutation.
 
-Examples:
+In practice, the most important protected branches are usually:
 
-* `main`
-* `develop`
+- `main`
+- `develop`
 
-#### Why enforce it
+#### 4.5.1 Why it matters
 
-Direct pushes can bypass review and invalidate the flow.
+Direct pushes can bypass review, validation, and merge policy.
 
-#### Typical enforcement points
+That weakens the workflow even if the written code is otherwise valid.
 
-* repository branch protection
-* server-side Git hooks
-* platform policy settings
+#### 4.5.2 Common validation targets
 
----
+Typical protected branch controls include:
 
-### 4.6 Commit Message Conventions
+- direct push restrictions
+- pull request requirements
+- required review gates
+- required passing checks before merge
 
-Commit messages are not the core of Stability Flow, but they are often useful to enforce alongside it.
+#### 4.5.3 Typical enforcement points
 
-Examples:
-
-```text id="h75rnt"
-feat: add authentication flow
-fix: patch production issue
-docs: clarify hotfix reconciliation
-chore: prepare release 1.3.0
-```
-
-#### Why enforce it
-
-Consistent commit messages improve:
-
-* traceability
-* release notes
-* auditability
-* tooling compatibility
-
-#### Typical enforcement points
-
-* local hooks
-* CI validation
-* merge-time checks
+- repository branch protection
+- platform policy settings
+- server-side Git controls
 
 ---
 
-## 5. What Is Harder to Enforce Reliably
+### 4.6. Promotion Safety
 
-Some rules are harder to validate fully through automation.
+Promotion safety focuses on whether code reaches production through the correct path.
 
-These should still be reviewed, but enforcement may be partial or heuristic.
+This is one of the most important areas to protect.
 
----
+#### 4.6.1 Why it matters
 
-### 5.1 Release Branch Content Purity
+The most important production question is not just:
 
-A `release/*` branch should usually contain only release-safe changes.
+> did this code work?
 
-That is easy to describe, but harder to enforce reliably.
+It is also:
 
-For example:
+> did this code reach production through the intended path?
 
-* version bumps are easy to detect
-* changelog changes are easy to detect
-* “this file change is acceptable release preparation” is often context-dependent
+Promotion safety is what preserves the meaning of `main` as the production line.
 
-#### Practical approach
+#### 4.6.2 Common validation targets
 
-Teams may choose to enforce:
+Typical promotion safety checks include:
 
-* allowed file patterns
-* allowed commit types
-* release PR review requirements
+- only promotion branches may target `main`
+- release candidates are based on current production truth
+- invalid direct production paths are rejected
 
-But some judgment usually remains human.
+#### 4.6.3 Typical enforcement points
 
----
-
-### 5.2 “Was This Really a Hotfix?”
-
-A branch may be named `hotfix/*`, but that does not prove it is truly urgent production work.
-
-This is partly a policy and review concern, not only a technical one.
-
-#### Practical approach
-
-Use:
-
-* PR review
-* incident review
-* approval gates
-* release sign-off
-
-Automation can support this, but cannot fully decide intent.
+- pull request checks
+- protected branch policy
+- release automation
+- merge queue validation
 
 ---
 
-### 5.3 Sync Branch Necessity
+### 4.7. Reconciliation Safety
 
-A team may prefer using `sync/*` for reintegration, but determining when it is “required” may be contextual.
+Reconciliation safety focuses on whether production truth returns to future development through the correct path.
 
-Example considerations:
+#### 4.7.1 Why it matters
 
-* size of divergence
-* merge conflict likelihood
-* operational risk
-* release timing
+This is where many workflows quietly drift.
 
-This is often better handled by team policy than strict automation.
+Teams often protect promotion into production but under-protect the path that brings production changes back into future work.
+
+That creates confusion later when planned releases are cut from stale or partially reconciled branches.
+
+#### 4.7.2 Common validation targets
+
+Typical reconciliation checks include:
+
+- reconciliation occurs through `sync/*`
+- direct `main` → `develop` merges are rejected
+- planned release branches are not created from stale `develop`
+- unresolved reconciliation state blocks future planned promotion
+
+#### 4.7.3 Typical enforcement points
+
+- CI validation
+- pull request checks
+- merge queue validation
+- release gating automation
 
 ---
 
-## 6. Where Enforcement Can Happen
+### 4.8. Final Squash Commit Conventions
+
+If the repository adopts Stability Flow conventions, the final squash commit is a useful enforcement surface.
+
+#### 4.8.1 Why it matters
+
+Final squash commits are part of long-lived repository history.
+
+Consistent final commit formatting improves:
+
+- readability
+- release note generation
+- auditability
+- automation compatibility
+
+#### 4.8.2 Common validation targets
+
+Typical checks include:
+
+- valid final commit type
+- breaking change formatting
+- prohibited final forms such as `revert:` if conventions disallow them
+
+#### 4.8.3 Typical enforcement points
+
+- local hooks
+- CI validation
+- merge-time checks
+
+This enforcement surface is optional if a team chooses not to adopt the conventions document.
+
+---
+
+## 5. What Is Easier vs Harder to Enforce
+
+Not every rule is equally automatable.
+
+Some parts of Stability Flow are structurally easy to validate.
+
+Others require more context or judgment.
+
+---
+
+### 5.1. Easier to Enforce Reliably
+
+The following are usually strong automation candidates:
+
+- branch naming
+- branch origin
+- merge target validity
+- merge strategy
+- protected branch writes
+- final squash commit format
+- direct promotion path restrictions
+- direct reconciliation path restrictions
+
+These rules are usually well-suited to validation because they are structurally observable.
+
+---
+
+### 5.2. Harder to Enforce Reliably
+
+The following are often harder to validate perfectly:
+
+- whether a release branch contains only release-safe changes
+- whether a branch is truly a hotfix rather than just “important work”
+- whether a reconciliation conflict was resolved correctly
+- whether a release candidate should be discarded rather than repaired
+- whether exploratory work should be recreated instead of reused
+
+These rules are still important.
+
+They are just more likely to require policy, review, or judgment in addition to automation.
+
+---
+
+## 6. Enforcement Layers
 
 Stability Flow can be enforced at multiple layers.
 
@@ -310,187 +406,226 @@ Strong adoption usually combines more than one.
 
 ---
 
-## 7. Local Enforcement
+### 6.1. Local Validation
 
-Local enforcement helps catch issues before code is pushed.
+Local validation helps developers catch issues before code is pushed.
 
-Examples:
+Examples include:
 
-* branch name checks
-* commit message validation
-* branch origin checks
-* pre-push merge eligibility checks
+- branch naming checks
+- commit message validation
+- branch origin checks
+- pre-push merge eligibility checks
 
-### Benefits
+#### 6.1.1 Benefits
 
-* fast feedback
-* lower CI noise
-* easier developer correction
+- fast feedback
+- lower CI noise
+- easier developer correction
 
-### Limitations
+#### 6.1.2 Limitations
 
-* can be bypassed
-* depends on local setup
-* not sufficient on its own for protected workflows
-
----
-
-## 8. Pull Request and CI Enforcement
-
-CI and pull request validation are among the most practical enforcement layers.
-
-Examples:
-
-* reject invalid branch names
-* reject invalid merge targets
-* reject invalid branch origins
-* validate commit messages
-* validate release branch rules
-
-### Benefits
-
-* centralized
-* visible
-* auditable
-* works across teams
-
-### Limitations
-
-* only catches issues once code is pushed
-* depends on platform integration quality
+- can be bypassed
+- depends on local setup
+- should not be the only enforcement layer for protected workflows
 
 ---
 
-## 9. Branch Protection and Repository Policy
+### 6.2. Pull Request and CI Validation
 
-Repository policy should reinforce the most important branch protections.
+Pull request and CI validation are often the most practical centralized enforcement layer.
 
-Examples:
+Examples include:
 
-* prevent direct pushes to `main`
-* require pull requests into `main`
-* restrict merge methods
-* require passing checks before merge
+- reject invalid branch names
+- reject invalid merge targets
+- reject invalid branch origins
+- validate merge strategy expectations
+- validate promotion and reconciliation paths
+- validate final squash commit formatting
 
-### Benefits
+#### 6.2.1 Benefits
 
-* strong control over protected branches
-* difficult to bypass accidentally
-* aligns well with Stability Flow’s promotion model
+- centralized
+- visible
+- auditable
+- works across teams
 
-### Limitations
+#### 6.2.2 Limitations
 
-* platform capabilities vary
-* not every rule can be expressed in native repository settings
-
----
-
-## 10. Server-Side Enforcement
-
-Teams with stronger governance requirements may enforce Stability Flow through server-side Git controls.
-
-Examples:
-
-* pre-receive hooks
-* update hooks
-* protected repository services
-* internal Git policy gateways
-
-### Benefits
-
-* difficult to bypass
-* platform-independent in principle
-* strong organizational control
-
-### Limitations
-
-* more operational overhead
-* may require custom infrastructure
+- catches issues only after code is pushed
+- depends on repository and platform integration quality
 
 ---
 
-## 11. Recommended Enforcement Layering
+### 6.3. Branch Protection and Repository Policy
 
-The following layered model is recommended.
+Branch protection should reinforce the most important branch guarantees.
 
-### Recommended minimum
+Examples include:
 
-* branch naming validation
-* merge eligibility validation
-* protected `main`
-* protected `develop`
+- prevent direct pushes to `main`
+- prevent direct pushes to `develop`
+- require pull requests into protected branches
+- restrict merge methods
+- require passing checks before merge
 
-### Recommended stronger model
+#### 6.3.1 Benefits
 
-* local validation
-* CI validation
-* protected branches
-* merge strategy enforcement
-* release PR review requirements
+- strong protection for the most sensitive branches
+- difficult to bypass accidentally
+- aligns well with the Stability Flow promotion model
 
-### Recommended mature model
+#### 6.3.2 Limitations
 
-* local validation
-* CI validation
-* branch protection
-* reusable workflows
-* release automation
-* optional server-side enforcement
+- platform capabilities vary
+- not every rule can be expressed natively
+
+---
+
+### 6.4. Merge Queue and Release Gating
+
+Teams with stricter workflow requirements may also validate Stability Flow at merge queue or release promotion time.
+
+Examples include:
+
+- promotion path validation before merge queue admission
+- stale reconciliation detection before release creation
+- release ancestry validation
+- release gating based on policy compliance
+
+#### 6.4.1 Benefits
+
+- protects the highest-risk workflow transitions
+- supports stronger release discipline
+- helps prevent policy bypass late in the flow
+
+#### 6.4.2 Limitations
+
+- more workflow complexity
+- usually requires more custom integration
+
+---
+
+### 6.5. Server-Side Git Enforcement
+
+Teams with stronger governance needs may enforce parts of Stability Flow at the Git server layer.
+
+Examples include:
+
+- pre-receive hooks
+- update hooks
+- repository policy gateways
+- internal Git control services
+
+#### 6.5.1 Benefits
+
+- difficult to bypass
+- strong organizational control
+- platform-independent in principle
+
+#### 6.5.2 Limitations
+
+- more operational overhead
+- may require custom infrastructure
+
+---
+
+## 7. Recommended Enforcement Layering
 
 The exact implementation may vary by team and platform.
 
+A useful enforcement model usually grows in layers.
+
+### 7.1. Recommended minimum
+
+- branch naming validation
+- branch origin validation
+- merge eligibility validation
+- protected `main`
+- protected `develop`
+
+### 7.2. Recommended stronger model
+
+- local validation
+- CI validation
+- protected branches
+- merge strategy enforcement
+- promotion path validation
+- reconciliation path validation
+
+### 7.3. Recommended mature model
+
+- local validation
+- CI validation
+- branch protection
+- merge strategy enforcement
+- promotion and reconciliation gating
+- optional server-side enforcement
+
+The important thing is not using every possible mechanism.
+
+The important thing is preserving the branching contract consistently.
+
 ---
 
-## 12. Human Review Still Matters
+## 8. Human Review Still Matters
 
-Stability Flow should be enforceable, but not every important decision can be automated.
+Stability Flow is designed to be enforceable, but not every important decision should be reduced to automation.
 
-Examples that still require human review include:
+Examples that still benefit from human review include:
 
-* whether a hotfix is appropriate
-* whether a release branch should be discarded
-* whether a reintegration path is safe
-* whether a release is ready for promotion
+- whether a hotfix is appropriate
+- whether a release branch should be discarded
+- whether a release candidate is trustworthy
+- whether a reconciliation conflict was resolved correctly
+- whether a branch still reflects its intended purpose
 
-Automation should reduce mistakes, not replace judgment.
+Automation should reduce avoidable mistakes.
+
+It should not replace judgment.
 
 ---
 
-## 13. Reference Tooling
+## 9. Reference Tooling
 
-This project may provide reference tooling and integrations to help enforce Stability Flow.
-
-These are implementations of the specification, not the definition of the specification.
+Reference tooling may be provided to help teams adopt or validate Stability Flow.
 
 Examples may include:
 
-* local validators
-* CLI tools
-* GitHub Actions
-* reusable workflows
-* CI integration examples
-* branch policy templates
+- local validators
+- CLI tools
+- reusable workflows
+- CI integration examples
+- policy templates
 
-Teams may use these directly, adapt them, or build their own tooling.
+Reference tooling is an implementation of the model.
+
+It is not the definition of the model.
+
+Teams may use reference tooling, adapt it, or build their own.
 
 ---
 
-## 14. Enforcement Summary
+## 10. Summary
 
 At a practical level, Stability Flow is best enforced by validating:
 
-* branch names
-* branch origins
-* merge targets
-* merge strategy
-* protected branch writes
-* release promotion paths
+- branch naming
+- branch origin
+- merge eligibility
+- merge strategy
+- protected branch writes
+- promotion safety
+- reconciliation safety
+- optional naming and commit conventions
 
 The exact tooling is flexible.
 
 The important thing is that the workflow remains:
 
-* explicit
-* stable
-* reviewable
-* auditable
+- explicit
+- reviewable
+- stable
+- auditable
+- enforceable
