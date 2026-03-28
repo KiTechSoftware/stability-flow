@@ -1,0 +1,58 @@
+name: Stability Flow PR
+
+on:
+  workflow_call:
+    inputs:
+      source:
+        description: "PR source branch"
+        required: true
+        type: string
+      target:
+        description: "PR target branch"
+        required: true
+        type: string
+      title:
+        description: "PR title, used as final squash commit message"
+        required: true
+        type: string
+      format:
+        description: "CLI output format"
+        required: false
+        default: text
+        type: string
+
+jobs:
+  enforce:
+    name: Enforce Stability Flow PR Rules
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate source branch name
+        uses: KiTechSoftware/stability-flow@v1
+        with:
+          command: validate-branch-name
+          branch: ${{ inputs.source }}
+          format: ${{ inputs.format }}
+
+      - name: Validate target branch name
+        uses: KiTechSoftware/stability-flow@v1
+        with:
+          command: validate-branch-name
+          branch: ${{ inputs.target }}
+          format: ${{ inputs.format }}
+
+      - name: Validate merge path
+        uses: KiTechSoftware/stability-flow@v1
+        with:
+          command: validate-merge
+          source: ${{ inputs.source }}
+          target: ${{ inputs.target }}
+          format: ${{ inputs.format }}
+
+      - name: Validate PR title as squash commit
+        uses: KiTechSoftware/stability-flow@v1
+        with:
+          command: validate-commit
+          message: ${{ inputs.title }}
+          mode: squash
+          format: ${{ inputs.format }}
