@@ -52,7 +52,6 @@ jobs:
     uses: KiTechSoftware/stability-flow/.github/workflows/pr-to-develop.yml@main
     with:
       source: ${{ github.head_ref }}
-      target: ${{ github.base_ref }}
       title: ${{ github.event.pull_request.title }}
       allow_non_prefixed_branches_to_develop: ${{ inputs.allow_non_prefixed_branches_to_develop || false }}
       format: ${{ inputs.format || 'text' }}
