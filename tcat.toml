@@ -6,3 +6,6 @@ extensions = ["md"]
 
 [scripts.go]
 extensions = ["go"]
+
+[scripts.json]
+extensions = ["json"]
