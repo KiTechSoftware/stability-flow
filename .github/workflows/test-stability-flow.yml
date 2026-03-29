@@ -24,4 +24,3 @@ jobs:
       allow_non_prefixed_branches_to_develop: false
       format: text
       github-summary: true
-      stability-flow-ref: main

@@ -25,11 +25,6 @@ on:
         required: false
         type: boolean
         default: true
-      stability-flow-ref:
-        description: Ref to use when calling KiTechSoftware/stability-flow
-        required: false
-        type: string
-        default: main
 
 permissions:
   contents: read
@@ -40,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Validate source branch name
-        uses: KiTechSoftware/stability-flow@${{ inputs.stability-flow-ref }}
+        uses: KiTechSoftware/stability-flow@main
         with:
           command: validate-branch-name
           branch: ${{ inputs.source }}
@@ -48,7 +43,7 @@ jobs:
           github-summary: ${{ inputs.github-summary }}
 
       - name: Validate target branch name
-        uses: KiTechSoftware/stability-flow@${{ inputs.stability-flow-ref }}
+        uses: KiTechSoftware/stability-flow@main
         with:
           command: validate-branch-name
           branch: ${{ inputs.target }}
@@ -56,7 +51,7 @@ jobs:
           github-summary: ${{ inputs.github-summary }}
 
       - name: Validate merge path
-        uses: KiTechSoftware/stability-flow@${{ inputs.stability-flow-ref }}
+        uses: KiTechSoftware/stability-flow@main
         with:
           command: validate-merge
           source: ${{ inputs.source }}
@@ -65,7 +60,7 @@ jobs:
           github-summary: ${{ inputs.github-summary }}
 
       - name: Validate PR title as squash commit
-        uses: KiTechSoftware/stability-flow@${{ inputs.stability-flow-ref }}
+        uses: KiTechSoftware/stability-flow@main
         with:
           command: validate-commit
           message: ${{ inputs.title }}
