@@ -1,0 +1,195 @@
+name: Next version
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Version calculation mode"
+        required: false
+        default: release
+        type: choice
+        options:
+          - release
+          - hotfix
+
+  workflow_call:
+    inputs:
+      mode:
+        description: "Version calculation mode"
+        required: false
+        default: release
+        type: string
+    outputs:
+      current_version:
+        description: "Current version without leading v"
+        value: ${{ jobs.next-version.outputs.current_version }}
+      current_tag:
+        description: "Current tag with leading v"
+        value: ${{ jobs.next-version.outputs.current_tag }}
+      next_version:
+        description: "Next version without leading v"
+        value: ${{ jobs.next-version.outputs.next_version }}
+      next_tag:
+        description: "Next tag with leading v"
+        value: ${{ jobs.next-version.outputs.next_tag }}
+      bump_type:
+        description: "major, minor, or patch"
+        value: ${{ jobs.next-version.outputs.bump_type }}
+      has_tags:
+        description: "true if at least one matching v* tag exists"
+        value: ${{ jobs.next-version.outputs.has_tags }}
+
+permissions:
+  contents: read
+
+jobs:
+  next-version:
+    runs-on: ubuntu-latest
+    outputs:
+      current_version: ${{ steps.compute.outputs.current_version }}
+      current_tag: ${{ steps.compute.outputs.current_tag }}
+      next_version: ${{ steps.compute.outputs.next_version }}
+      next_tag: ${{ steps.compute.outputs.next_tag }}
+      bump_type: ${{ steps.compute.outputs.bump_type }}
+      has_tags: ${{ steps.compute.outputs.has_tags }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute next version
+        id: compute
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MODE="${{ inputs.mode || 'release' }}"
+
+          if [[ "$MODE" != "release" && "$MODE" != "hotfix" ]]; then
+            echo "Unsupported mode: $MODE"
+            exit 1
+          fi
+
+          LAST_TAG="$(git tag --list 'v*' --sort=-version:refname | head -n1 || true)"
+
+          if [[ -n "$LAST_TAG" ]]; then
+            HAS_TAGS="true"
+            CURRENT_TAG="$LAST_TAG"
+            CURRENT_VERSION="${LAST_TAG#v}"
+            COMMITS="$(git log --format='%s%n%b%x00' "${LAST_TAG}..HEAD" || true)"
+          else
+            HAS_TAGS="false"
+            CURRENT_TAG=""
+            CURRENT_VERSION="0.0.0"
+            COMMITS="$(git log --format='%s%n%b%x00' || true)"
+          fi
+
+          bump_major=false
+          bump_minor=false
+          bump_patch=false
+
+          if [[ "$MODE" == "hotfix" ]]; then
+            BUMP_TYPE="patch"
+          else
+            # Conventional commits:
+            # - breaking: "<type>(scope)!: ..." or "BREAKING CHANGE:"
+            # - feat:     "feat: ..." / "feat(scope): ..."
+            # - fix:      "fix: ..." / "fix(scope): ..."
+            #
+            # Strict patch policy:
+            # - only fix:* counts as patch
+            # - other types do not count as patch by themselves
+            # - release mode still falls back to patch if nothing signals a version bump
+
+            if printf '%s' "$COMMITS" | grep -Eiq '(^|[[:space:]])BREAKING CHANGE:|^[a-z]+(\([^)]+\))?!:'; then
+              bump_major=true
+            fi
+
+            if printf '%s' "$COMMITS" | grep -Eiq '^feat(\([^)]+\))?: '; then
+              bump_minor=true
+            fi
+
+            if printf '%s' "$COMMITS" | grep -Eiq '^fix(\([^)]+\))?: '; then
+              bump_patch=true
+            fi
+
+            if [[ "$bump_major" == "true" ]]; then
+              BUMP_TYPE="major"
+            elif [[ "$bump_minor" == "true" ]]; then
+              BUMP_TYPE="minor"
+            elif [[ "$bump_patch" == "true" ]]; then
+              BUMP_TYPE="patch"
+            else
+              # Stability Flow release policy:
+              # planned releases should always advance by at least one patch
+              BUMP_TYPE="patch"
+            fi
+          fi
+
+          if [[ "$HAS_TAGS" == "false" ]]; then
+            if [[ "$MODE" == "hotfix" ]]; then
+              NEXT_VERSION="0.0.1"
+              NEXT_TAG="v0.0.1"
+              BUMP_TYPE="patch"
+            else
+              NEXT_VERSION="0.1.0"
+              NEXT_TAG="v0.1.0"
+              # Bootstrap release starts at 0.1.0 regardless of commit semantics
+              BUMP_TYPE="minor"
+            fi
+          else
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+            if [[ -z "${MAJOR:-}" || -z "${MINOR:-}" || -z "${PATCH:-}" ]]; then
+              echo "Latest tag is not a valid semver tag: $CURRENT_TAG"
+              exit 1
+            fi
+
+            case "$BUMP_TYPE" in
+              major)
+                MAJOR=$((MAJOR + 1))
+                MINOR=0
+                PATCH=0
+                ;;
+              minor)
+                MINOR=$((MINOR + 1))
+                PATCH=0
+                ;;
+              patch)
+                PATCH=$((PATCH + 1))
+                ;;
+              *)
+                echo "Unknown bump type: $BUMP_TYPE"
+                exit 1
+                ;;
+            esac
+
+            NEXT_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+            NEXT_TAG="v${NEXT_VERSION}"
+          fi
+
+          {
+            echo "current_version=${CURRENT_VERSION}"
+            echo "current_tag=${CURRENT_TAG}"
+            echo "next_version=${NEXT_VERSION}"
+            echo "next_tag=${NEXT_TAG}"
+            echo "bump_type=${BUMP_TYPE}"
+            echo "has_tags=${HAS_TAGS}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        shell: bash
+        run: |
+          {
+            echo "## Next version"
+            echo
+            echo "- Mode: \`${{ inputs.mode || 'release' }}\`"
+            echo "- Has tags: \`${{ steps.compute.outputs.has_tags }}\`"
+            echo "- Current version: \`${{ steps.compute.outputs.current_version }}\`"
+            echo "- Current tag: \`${{ steps.compute.outputs.current_tag || 'none' }}\`"
+            echo "- Bump type: \`${{ steps.compute.outputs.bump_type }}\`"
+            echo "- Next version: \`${{ steps.compute.outputs.next_version }}\`"
+            echo "- Next tag: \`${{ steps.compute.outputs.next_tag }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

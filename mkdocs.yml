@@ -36,6 +36,7 @@ theme:
 
 nav:
   - Home: index.md
+  - Getting Started: getting-started.md
   - Specification:
       - Spec: spec.md
       - Conventions: conventions.md

@@ -1,0 +1,95 @@
+name: Create release branch
+
+on:
+  workflow_dispatch:
+    inputs:
+      identifier:
+        description: 'Release identifier, e.g. 1.3.0'
+        required: true
+        type: string
+      source_branch:
+        description: 'Must be develop or hotfix/*'
+        required: false
+        default: 'develop'
+        type: string
+      push_branch:
+        description: 'Push the created branch to origin'
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  create-release-branch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate source branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE="${{ inputs.source_branch }}"
+          if [[ "$SOURCE" != "develop" && ! "$SOURCE" =~ ^hotfix\/.+$ ]]; then
+            echo "source_branch must be 'develop' or 'hotfix/*'"
+            exit 1
+          fi
+
+      - name: Build branch name
+        id: branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          RAW="${{ inputs.identifier }}"
+          SAFE="$(printf '%s' "$RAW" | tr '[:upper:]' '[:lower:]' | sed 's#[^a-z0-9._-]#-#g' | sed 's#--*#-#g' | sed 's#^-##; s#-$##')"
+          BRANCH="release/${SAFE}"
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate branch name
+        uses: KiTechSoftware/stability-flow@main
+        with:
+          command: validate-branch-name
+          branch: ${{ steps.branch.outputs.branch }}
+          target: main
+          format: markdown
+          github-summary: true
+
+      - name: Checkout source branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_branch }}
+          fetch-depth: 0
+
+      - name: Ensure branch does not already exist remotely
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads origin "${{ steps.branch.outputs.branch }}" >/dev/null 2>&1; then
+            echo "Branch already exists: ${{ steps.branch.outputs.branch }}"
+            exit 1
+          fi
+
+      - name: Create local branch from source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git switch -c "${{ steps.branch.outputs.branch }}"
+
+      - name: Push branch
+        if: ${{ inputs.push_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git push -u origin "${{ steps.branch.outputs.branch }}"
+
+      - name: Summary
+        shell: bash
+        run: |
+          {
+            echo "## Release branch created"
+            echo
+            echo "- Branch: \`${{ steps.branch.outputs.branch }}\`"
+            echo "- Source: \`${{ inputs.source_branch }}\`"
+            echo "- Pushed: \`${{ inputs.push_branch }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

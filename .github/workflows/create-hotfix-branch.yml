@@ -1,0 +1,80 @@
+name: Create hotfix branch
+
+on:
+  workflow_dispatch:
+    inputs:
+      identifier:
+        description: 'Hotfix identifier, e.g. 1.2.4'
+        required: true
+        type: string
+      push_branch:
+        description: 'Push the created branch to origin'
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  create-hotfix-branch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Build branch name
+        id: branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          RAW="${{ inputs.identifier }}"
+          SAFE="$(printf '%s' "$RAW" | tr '[:upper:]' '[:lower:]' | sed 's#[^a-z0-9._-]#-#g' | sed 's#--*#-#g' | sed 's#^-##; s#-$##')"
+          BRANCH="hotfix/${SAFE}"
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate branch name
+        uses: KiTechSoftware/stability-flow@main
+        with:
+          command: validate-branch-name
+          branch: ${{ steps.branch.outputs.branch }}
+          target: main
+          format: markdown
+          github-summary: true
+
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Ensure branch does not already exist remotely
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads origin "${{ steps.branch.outputs.branch }}" >/dev/null 2>&1; then
+            echo "Branch already exists: ${{ steps.branch.outputs.branch }}"
+            exit 1
+          fi
+
+      - name: Create local branch from main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git switch -c "${{ steps.branch.outputs.branch }}"
+
+      - name: Push branch
+        if: ${{ inputs.push_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git push -u origin "${{ steps.branch.outputs.branch }}"
+
+      - name: Summary
+        shell: bash
+        run: |
+          {
+            echo "## Hotfix branch created"
+            echo
+            echo "- Branch: \`${{ steps.branch.outputs.branch }}\`"
+            echo "- Source: \`main\`"
+            echo "- Pushed: \`${{ inputs.push_branch }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

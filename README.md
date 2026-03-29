@@ -1,47 +1,49 @@
 # Stability Flow
 
-**Stability Flow** is a branching strategy specification for teams that want:
+**Stability Flow** is a release-safe Git branching model for teams that need predictable releases, production hotfixes, and explicit reconciliation back into ongoing development.
 
-- a **stable production branch**
-- **planned releases**
-- **safe hotfixes**
-- **explicit reconciliation after production divergence**
+It is designed as a practical alternative to Gitflow for teams that want:
 
-It is designed as an alternative to Gitflow for teams that want a workflow that is easier to reason about, easier to enforce, and clearer under release pressure.
+- a protected production branch
+- structured release preparation
+- safer hotfix handling
+- explicit production-to-development reconciliation
+- optional CI and GitHub ruleset enforcement
 
----
+Stability Flow is **spec-first**, but it is also **usable today** through reusable GitHub workflows, copy-pasteable workflow definitions, and optional GitHub rulesets.
+
+## Pre-1.0 Notice
+
+Stability Flow is currently being refined.
+
+Until `v1.0.0`, some reusable workflows may reference `@main` while rules, validations, and rollout ergonomics are finalized.
+
+Once stabilized, versioned tags will be the recommended integration path.
 
 ## Why Stability Flow?
 
-Many teams eventually run into the same operational problems:
+Many teams sit in an awkward middle ground:
 
-- production needs to stay stable
-- planned work continues in parallel
-- urgent hotfixes sometimes need to ship before the next planned release
-- `main` and the future development line can diverge temporarily
-- branch movement becomes hard to reason about under pressure
+- **GitHub Flow** can feel too loose for release trains and hotfixes
+- **Gitflow** can feel too heavy and ceremony-driven
+- **Trunk-based development** is often ideal in theory, but not always practical for teams with staged releases and production divergence
 
-Stability Flow exists to make those behaviors explicit.
+Stability Flow exists for teams that need something **simpler than Gitflow**, but **safer and more explicit than ad hoc release branching**.
 
-It is designed to keep production promotion clear, hotfixes isolated, and reconciliation intentional.
+## Core Model
 
----
+Stability Flow uses these branch roles:
 
-## Core Idea
+- `main` → production / stable
+- `develop` → ongoing integration
+- `release/*` → release preparation and stabilization
+- `hotfix/*` → urgent fixes from production
+- `sync/*` → explicit reconciliation of production changes back into future development
+- `wip/*` → optional isolated work branches
 
-At a high level:
+This creates a predictable path for both planned releases and emergency production fixes.
 
-- regular work happens from `develop`
-- production stays protected on `main`
-- only `release/*` may promote into `main`
-- hotfixes start from `main`
-- production changes return to `develop` through `sync/*`
-
-This keeps the path to production explicit and makes release behavior easier to reason about.
-
----
-
-## Quick Visual
+### Quick Visual
 
 ```mermaid
 gitGraph
@@ -62,26 +64,89 @@ gitGraph
    merge sync/main-into-develop-1.0.0
 ```
 
-Planned work flows through `develop`, promotion happens through `release/*`, and production changes are reconciled back into the future development line through `sync/*`.
+## Start Here
+
+There are **three easy ways** to adopt Stability Flow.
+
+### Option A — Use the full reusable workflow (recommended)
+
+Use the included drop-in workflow to validate pull requests and branch activity.
+
+### Option B — Copy and paste the workflow into your own repository
+
+If you prefer to own the workflow directly, you can copy the provided workflow files into your repo and customize them.
+
+### Option C — Roll out incrementally
+
+Adopt only the parts you need first:
+
+- `pr-to-main.yml`
+- `pr-to-develop.yml`
+
+Then later add:
+
+- branch validation workflows
+- GitHub rulesets
+- helper branch-creation workflows
+
+📘 See **[Getting Started](docs/getting-started.md)** for the full setup guide.
 
 ---
 
-## What Stability Flow Optimizes For
+## Included Workflows
 
-Stability Flow is designed to optimize for:
+### Validation / enforcement
 
-- **production stability**
-- **explicit release promotion**
-- **safe hotfix handling**
-- **clear reconciliation after divergence**
-- **machine-checkable workflow rules**
+- `stability-flow.yml` → full drop-in validation workflow
+- `pr-to-main.yml` → validates pull requests targeting `main`
+- `pr-to-develop.yml` → validates pull requests targeting `develop`
+- `release-branch.yml` → validates `release/*` branches
+- `hotfix-branch.yml` → validates `hotfix/*` branches
+- `sync-branch.yml` → validates `sync/*` branches
+- `wip-branch.yml` → validates `wip/*` branches
 
-It is especially useful for teams that:
+### Helper / adoption workflows
 
-- release on a planned cadence
-- occasionally need urgent hotfixes
-- want stronger protection around `main`
-- want a branching model that can be validated by tooling and policy
+- `create-release-branch.yml` → creates a correctly named `release/*` branch
+- `create-hotfix-branch.yml` → creates a correctly named `hotfix/*` branch
+- `create-sync-branch.yml` → creates a correctly named `sync/*` branch
+
+These helper workflows are optional, but they make rollout easier and reduce naming mistakes.
+
+---
+
+## GitHub Rulesets Included
+
+Stability Flow also includes optional GitHub branch/tag rulesets that teams can paste or adapt for their repositories:
+
+- `main.ruleset.json`
+- `develop.ruleset.json`
+- `release.ruleset.json`
+- `hotfix.ruleset.json`
+- `sync.ruleset.json`
+- `wip.ruleset.json`
+- `tag.ruleset.json`
+
+These are useful if you want branch protections and required checks to align directly with Stability Flow conventions.
+
+📘 See **[Getting Started](docs/getting-started.md)** for recommended usage.
+
+---
+
+## Best Fit
+
+Stability Flow works best for teams that:
+
+- ship on a planned release cadence
+- occasionally need production hotfixes
+- want `main` to stay stable and tightly controlled
+- want branching rules that can be enforced in GitHub Actions and rulesets
+
+It is probably **not** the right fit if your team:
+
+- does true trunk-based development
+- deploys continuously many times per day
+- has no meaningful distinction between “in development” and “production-ready”
 
 ---
 
@@ -91,6 +156,7 @@ The full public documentation lives under [`docs/`](docs/) and on the published 
 
 Recommended reading order:
 
+- [Getting Started](docs/getting-started.md)
 - [Specification](docs/spec.md)
 - [Conventions](docs/conventions.md)
 - [Design](docs/design.md)
