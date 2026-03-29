@@ -6,9 +6,17 @@ import (
 	"stability-flow/internal/branch"
 )
 
-func ValidateMerge(source, target string) (bool, string) {
+func ValidateMerge(source, target string, allowNonPrefixedBranchesToDevelop bool) (bool, string) {
 	sourceType := branch.Classify(source)
 	targetType := branch.Classify(target)
+
+	// special compatibility mode:
+	// allow non-prefixed contributor branches only when targeting develop
+	if allowNonPrefixedBranchesToDevelop &&
+		sourceType == branch.TypeInvalid &&
+		targetType == branch.TypeDevelop {
+		return true, "non-prefixed contributor branches may merge into develop when compatibility mode is enabled, using squash merge"
+	}
 
 	if sourceType == branch.TypeInvalid {
 		return false, fmt.Sprintf("invalid source branch type: %s", source)

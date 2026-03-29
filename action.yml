@@ -16,7 +16,7 @@ inputs:
     description: "Source branch for validate-merge"
     required: false
   target:
-    description: "Target branch for validate-merge"
+    description: "Target branch for validate-merge or contextual validation for validate-branch-name"
     required: false
   message:
     description: "Commit message or PR title for validate-commit"
@@ -25,6 +25,10 @@ inputs:
     description: "Commit validation mode: work or squash"
     required: false
     default: squash
+  allow-non-prefixed-branches-to-develop:
+    description: "Allow non-prefixed contributor branches only when targeting develop"
+    required: false
+    default: "false"
   format:
     description: "CLI output format: text, json, jsonl, markdown"
     required: false
@@ -53,6 +57,7 @@ runs:
         INPUT_TARGET: ${{ inputs.target }}
         INPUT_MESSAGE: ${{ inputs.message }}
         INPUT_MODE: ${{ inputs.mode }}
+        INPUT_ALLOW_NON_PREFIXED_BRANCHES_TO_DEVELOP: ${{ inputs.allow-non-prefixed-branches-to-develop }}
         INPUT_FORMAT: ${{ inputs.format }}
         INPUT_GITHUB_SUMMARY: ${{ inputs.github-summary }}
       run: |
@@ -85,6 +90,10 @@ runs:
           args+=("--mode" "$INPUT_MODE")
         fi
 
+        if [[ "${INPUT_ALLOW_NON_PREFIXED_BRANCHES_TO_DEVELOP}" == "true" ]]; then
+          args+=("--allow-non-prefixed-branches-to-develop")
+        fi
+
         if [[ -n "${INPUT_FORMAT}" ]]; then
           args+=("--format" "$INPUT_FORMAT")
         fi
@@ -101,7 +110,9 @@ runs:
         if [[ "${INPUT_GITHUB_SUMMARY}" == "true" && -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
           case "${INPUT_COMMAND}" in
             validate-branch-name)
-              if [[ -n "${INPUT_BRANCH}" ]]; then
+              if [[ -n "${INPUT_BRANCH}" && -n "${INPUT_TARGET}" ]]; then
+                SUMMARY_TITLE="Branch validation: \`${INPUT_BRANCH}\` for target \`${INPUT_TARGET}\`"
+              elif [[ -n "${INPUT_BRANCH}" ]]; then
                 SUMMARY_TITLE="Branch validation: \`${INPUT_BRANCH}\`"
               else
                 SUMMARY_TITLE="Branch validation"

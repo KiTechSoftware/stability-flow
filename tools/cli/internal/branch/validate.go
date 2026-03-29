@@ -2,7 +2,7 @@ package branch
 
 import "fmt"
 
-func ValidateName(name string) (bool, string) {
+func ValidateName(name string, target string, allowNonPrefixed bool) (bool, string) {
 	t := Classify(name)
 
 	switch t {
@@ -31,6 +31,14 @@ func ValidateName(name string) (bool, string) {
 	case TypeWIP:
 		return validateSuffixed(name, "wip/")
 	default:
+		if name == "" {
+			return false, "branch name must not be empty"
+		}
+
+		if allowNonPrefixed && target == "develop" {
+			return true, "valid non-prefixed contributor branch for develop compatibility mode"
+		}
+
 		return false, fmt.Sprintf("invalid branch name: %s", name)
 	}
 }

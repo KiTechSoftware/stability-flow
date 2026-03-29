@@ -110,6 +110,24 @@ func TestCLICommands(t *testing.T) {
 		)
 	})
 
+	t.Run("validate merge non-prefixed to develop passes when enabled", func(t *testing.T) {
+		code, output := runCLI(t,
+			"validate-merge",
+			"--source", "my-branch",
+			"--target", "develop",
+			"--allow-non-prefixed-branches-to-develop",
+		)
+
+		if code != 0 {
+			t.Fatalf("expected exit code 0, got %d\noutput:\n%s", code, output)
+		}
+
+		assertContainsAll(t, output,
+			"PASS: merge allowed: my-branch -> develop",
+			"reason: non-prefixed contributor branches may merge into develop when compatibility mode is enabled",
+		)
+	})
+
 	t.Run("validate origin hotfix from main passes text", func(t *testing.T) {
 		code, output := runCLI(t,
 			"validate-origin",
@@ -411,6 +429,42 @@ func TestCLICommands(t *testing.T) {
 		assertContainsAll(t, output,
 			"FAIL: branch name not allowed: banana/foo",
 			"reason: invalid branch name: banana/foo",
+		)
+	})
+
+	t.Run("validate branch name non-prefixed passes when enabled for develop", func(t *testing.T) {
+		code, output := runCLI(t,
+			"validate-branch-name",
+			"--branch", "my-branch",
+			"--target", "develop",
+			"--allow-non-prefixed-branches-to-develop",
+		)
+
+		if code != 0 {
+			t.Fatalf("expected exit code 0, got %d\noutput:\n%s", code, output)
+		}
+
+		assertContainsAll(t, output,
+			"PASS: branch name allowed: my-branch",
+			"reason: valid non-prefixed contributor branch for develop compatibility mode",
+		)
+	})
+
+	t.Run("validate branch name non-prefixed still fails for main", func(t *testing.T) {
+		code, output := runCLI(t,
+			"validate-branch-name",
+			"--branch", "my-branch",
+			"--target", "main",
+			"--allow-non-prefixed-branches-to-develop",
+		)
+
+		if code != 1 {
+			t.Fatalf("expected exit code 1, got %d\noutput:\n%s", code, output)
+		}
+
+		assertContainsAll(t, output,
+			"FAIL: branch name not allowed: my-branch",
+			"reason: invalid branch name: my-branch",
 		)
 	})
 }

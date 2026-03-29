@@ -12,14 +12,15 @@ import (
 )
 
 type globalArgs struct {
-	command string
-	branch  string
-	base    string
-	source  string
-	target  string
-	message string
-	mode    string
-	format  string
+	command                           string
+	branch                            string
+	base                              string
+	source                            string
+	target                            string
+	message                           string
+	mode                              string
+	format                            string
+	allowNonPrefixedBranchesToDevelop bool
 }
 
 func main() {
@@ -54,24 +55,26 @@ func parseArgs() globalArgs {
 	branchName := fs.String("branch", "", "branch name for validate-branch-name or branch being created for validate-origin")
 	base := fs.String("base", "", "base branch for validate-origin")
 	source := fs.String("source", "", "source branch for validate-merge")
-	target := fs.String("target", "", "target branch for validate-merge")
+	target := fs.String("target", "", "target branch for validate-merge or contextual validation for validate-branch-name")
 	message := fs.String("message", "", "commit message for validate-commit")
 	mode := fs.String("mode", "squash", "validation mode: work or squash")
 	formatValue := fs.String("format", "text", "output format: text, json, jsonl, markdown")
+	allowNonPrefixedBranchesToDevelop := fs.Bool("allow-non-prefixed-branches-to-develop", false, "allow branches without specific prefixes to merge into develop")
 
 	if err := fs.Parse(os.Args[2:]); err != nil {
 		failUsage(err.Error())
 	}
 
 	return globalArgs{
-		command: command,
-		branch:  *branchName,
-		base:    *base,
-		source:  *source,
-		target:  *target,
-		message: *message,
-		mode:    *mode,
-		format:  *formatValue,
+		command:                           command,
+		branch:                            *branchName,
+		base:                              *base,
+		source:                            *source,
+		target:                            *target,
+		message:                           *message,
+		mode:                              *mode,
+		format:                            *formatValue,
+		allowNonPrefixedBranchesToDevelop: *allowNonPrefixedBranchesToDevelop,
 	}
 }
 
@@ -82,7 +85,12 @@ func validateMerge(args globalArgs) {
 
 	format := mustParseFormat(args.format)
 
-	ok, reason := rules.ValidateMerge(args.source, args.target)
+	ok, reason := rules.ValidateMerge(
+		args.source,
+		args.target,
+		args.allowNonPrefixedBranchesToDevelop,
+	)
+
 	renderAndExit(format, output.ValidationResult{
 		OK:      ok,
 		Command: "validate-merge",
@@ -149,14 +157,24 @@ func validateBranchName(args globalArgs) {
 
 	format := mustParseFormat(args.format)
 
-	ok, reason := branch.ValidateName(args.branch)
+	ok, reason := branch.ValidateName(
+		args.branch,
+		args.target,
+		args.allowNonPrefixedBranchesToDevelop,
+	)
+
+	fields := map[string]string{
+		"branch": args.branch,
+	}
+	if args.target != "" {
+		fields["target"] = args.target
+	}
+
 	renderAndExit(format, output.ValidationResult{
 		OK:      ok,
 		Command: "validate-branch-name",
 		Reason:  reason,
-		Fields: map[string]string{
-			"branch": args.branch,
-		},
+		Fields:  fields,
 	})
 }
 
@@ -195,5 +213,5 @@ Usage:
   stability-flow validate-merge --source <branch> --target <branch> [--format text|json|jsonl|markdown]
   stability-flow validate-origin --branch <branch> --base <branch> [--format text|json|jsonl|markdown]
   stability-flow validate-commit --mode <work|squash> --message "<type>: <description>" [--format text|json|jsonl|markdown]
-  stability-flow validate-branch-name --branch <branch> [--format text|json|jsonl|markdown]`)
+  stability-flow validate-branch-name --branch <branch> [--target <branch>] [--allow-non-prefixed-branches-to-develop] [--format text|json|jsonl|markdown]`)
 }

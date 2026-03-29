@@ -82,17 +82,35 @@ func renderMarkdown(result ValidationResult) string {
 	}
 
 	var b strings.Builder
-	b.WriteString("## Stability Flow Validation Result\n\n")
+	fmt.Fprintf(&b, "### %s\n\n", markdownTitle(result.Command))
 	fmt.Fprintf(&b, "- **Command:** `%s`\n", result.Command)
 	fmt.Fprintf(&b, "- **Status:** %s\n", status)
 
 	keys := sortedKeys(result.Fields)
 	for _, k := range keys {
+		if result.Fields[k] == "" {
+			continue
+		}
 		fmt.Fprintf(&b, "- **%s:** `%s`\n", titleize(k), result.Fields[k])
 	}
 
 	fmt.Fprintf(&b, "- **Reason:** %s\n", result.Reason)
 	return b.String()
+}
+
+func markdownTitle(command string) string {
+	switch command {
+	case "validate-merge":
+		return "Stability Flow Merge Validation Result"
+	case "validate-origin":
+		return "Stability Flow Branch Origin Validation Result"
+	case "validate-commit":
+		return "Stability Flow Commit Validation Result"
+	case "validate-branch-name":
+		return "Stability Flow Branch Name Validation Result"
+	default:
+		return "Stability Flow Validation Result"
+	}
 }
 
 func summaryLine(result ValidationResult) string {

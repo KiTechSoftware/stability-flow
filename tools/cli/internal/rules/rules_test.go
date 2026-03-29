@@ -7,28 +7,35 @@ func TestValidateMerge(t *testing.T) {
 		name   string
 		source string
 		target string
+		allow  bool
 		wantOK bool
 	}{
-		{"feat to develop", "feat/add-auth", "develop", true},
-		{"fix to develop", "fix/payment-null", "develop", true},
-		{"release to main", "release/1.2.3", "main", true},
-		{"main to sync", "main", "sync/main-into-develop-1.2.3", true},
-		{"sync to develop", "sync/main-into-develop-1.2.3", "develop", true},
+		{"feat to develop", "feat/add-auth", "develop", false, true},
+		{"fix to develop", "fix/payment-null", "develop", false, true},
+		{"release to main", "release/1.2.3", "main", false, true},
+		{"main to sync", "main", "sync/main-into-develop-1.2.3", false, true},
+		{"sync to develop", "sync/main-into-develop-1.2.3", "develop", false, true},
 
-		{"feat to main blocked", "feat/add-auth", "main", false},
-		{"wip to develop blocked", "wip/explore-auth", "develop", false},
-		{"main to develop blocked", "main", "develop", false},
-		{"hotfix to main blocked", "hotfix/1.2.4", "main", false},
-		{"hotfix to develop blocked", "hotfix/1.2.4", "develop", false},
-		{"release to develop blocked", "release/1.2.3", "develop", false},
-		{"main to release blocked", "main", "release/1.2.3", false},
+		{"feat to main blocked", "feat/add-auth", "main", false, false},
+		{"wip to develop blocked", "wip/explore-auth", "develop", false, false},
+		{"main to develop blocked", "main", "develop", false, false},
+		{"hotfix to main blocked", "hotfix/1.2.4", "main", false, false},
+		{"hotfix to develop blocked", "hotfix/1.2.4", "develop", false, false},
+		{"release to develop blocked", "release/1.2.3", "develop", false, false},
+		{"main to release blocked", "main", "release/1.2.3", false, false},
+
+		{"non-prefixed to develop allowed when enabled", "my-branch", "develop", true, true},
+		{"non-prefixed to develop blocked when disabled", "my-branch", "develop", false, false},
+		{"non-prefixed to main still blocked", "my-branch", "main", true, false},
+		{"reserved prefixed branch still blocked", "release/1.2.3", "develop", true, false},
+		{"main to develop still blocked with compatibility enabled", "main", "develop", true, false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotOK, _ := ValidateMerge(tt.source, tt.target)
+			gotOK, _ := ValidateMerge(tt.source, tt.target, tt.allow)
 			if gotOK != tt.wantOK {
-				t.Fatalf("ValidateMerge(%q, %q) = %v, want %v", tt.source, tt.target, gotOK, tt.wantOK)
+				t.Fatalf("ValidateMerge(%q, %q, %v) = %v, want %v", tt.source, tt.target, tt.allow, gotOK, tt.wantOK)
 			}
 		})
 	}
