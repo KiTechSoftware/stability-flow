@@ -1,0 +1,25 @@
+{
+    "name": "Stability Flow - sync branches",
+    "target": "branch",
+    "enforcement": "active",
+    "conditions": {
+      "ref_name": {
+        "include": ["refs/heads/sync/*"],
+        "exclude": []
+      }
+    },
+    "rules": [
+      { "type": "deletion" },
+      { "type": "non_fast_forward" },
+      {
+        "type": "required_status_checks",
+        "parameters": {
+          "strict_required_status_checks_policy": true,
+          "required_status_checks": [
+            { "context": "stability-flow/sync-branch" }
+          ]
+        }
+      }
+    ],
+    "bypass_actors": []
+  }

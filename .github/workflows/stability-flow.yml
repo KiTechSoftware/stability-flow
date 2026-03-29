@@ -44,7 +44,7 @@ jobs:
       target: ${{ github.base_ref }}
       title: ${{ github.event.pull_request.title }}
       format: ${{ inputs.format || 'text' }}
-      github-summary: ${{ inputs.github-summary != false }}
+      github-summary: ${{ github.event_name == 'push' || github.event_name == 'pull_request' || inputs.github-summary != false }}
 
   pr-to-develop:
     name: stability-flow/pr-to-develop
@@ -55,7 +55,7 @@ jobs:
       title: ${{ github.event.pull_request.title }}
       allow_non_prefixed_branches_to_develop: ${{ inputs.allow_non_prefixed_branches_to_develop || false }}
       format: ${{ inputs.format || 'text' }}
-      github-summary: ${{ inputs.github-summary != false }}
+      github-summary: ${{ github.event_name == 'push' || github.event_name == 'pull_request' || inputs.github-summary != false }}
 
   release-branch:
     name: stability-flow/release-branch
@@ -65,7 +65,7 @@ jobs:
       branch: ${{ github.ref_name }}
       message: ${{ github.event.head_commit.message }}
       format: ${{ inputs.format || 'text' }}
-      github-summary: ${{ inputs.github-summary != false }}
+      github-summary: ${{ github.event_name == 'push' || github.event_name == 'pull_request' || inputs.github-summary != false }}
 
   hotfix-branch:
     name: stability-flow/hotfix-branch
@@ -75,7 +75,7 @@ jobs:
       branch: ${{ github.ref_name }}
       message: ${{ github.event.head_commit.message }}
       format: ${{ inputs.format || 'text' }}
-      github-summary: ${{ inputs.github-summary != false }}
+      github-summary: ${{ github.event_name == 'push' || github.event_name == 'pull_request' || inputs.github-summary != false }}
 
   sync-branch:
     name: stability-flow/sync-branch
@@ -85,7 +85,7 @@ jobs:
       branch: ${{ github.ref_name }}
       message: ${{ github.event.head_commit.message }}
       format: ${{ inputs.format || 'text' }}
-      github-summary: ${{ inputs.github-summary != false }}
+      github-summary: ${{ github.event_name == 'push' || github.event_name == 'pull_request' || inputs.github-summary != false }}
 
   wip-branch:
     name: stability-flow/wip-branch
@@ -95,4 +95,4 @@ jobs:
       branch: ${{ github.ref_name }}
       message: ${{ github.event.head_commit.message }}
       format: ${{ inputs.format || 'text' }}
-      github-summary: ${{ inputs.github-summary != false }}
+      github-summary: ${{ github.event_name == 'push' || github.event_name == 'pull_request' || inputs.github-summary != false }}
