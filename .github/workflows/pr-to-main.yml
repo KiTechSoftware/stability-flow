@@ -1,0 +1,74 @@
+name: Stability Flow PR to main
+
+on:
+  workflow_call:
+    inputs:
+      source:
+        description: PR source branch
+        required: true
+        type: string
+      target:
+        description: PR target branch
+        required: true
+        type: string
+      title:
+        description: PR title, used as final squash commit message
+        required: true
+        type: string
+      format:
+        description: CLI output format
+        required: false
+        type: string
+        default: text
+      github-summary:
+        description: Append validator output to the GitHub Actions summary
+        required: false
+        type: boolean
+        default: true
+      stability-flow-ref:
+        description: Ref to use when calling KiTechSoftware/stability-flow
+        required: false
+        type: string
+        default: main
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  enforce:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate source branch name
+        uses: KiTechSoftware/stability-flow@${{ inputs.stability-flow-ref }}
+        with:
+          command: validate-branch-name
+          branch: ${{ inputs.source }}
+          format: ${{ inputs.format }}
+          github-summary: ${{ inputs.github-summary }}
+
+      - name: Validate target branch name
+        uses: KiTechSoftware/stability-flow@${{ inputs.stability-flow-ref }}
+        with:
+          command: validate-branch-name
+          branch: ${{ inputs.target }}
+          format: ${{ inputs.format }}
+          github-summary: ${{ inputs.github-summary }}
+
+      - name: Validate merge path
+        uses: KiTechSoftware/stability-flow@${{ inputs.stability-flow-ref }}
+        with:
+          command: validate-merge
+          source: ${{ inputs.source }}
+          target: ${{ inputs.target }}
+          format: ${{ inputs.format }}
+          github-summary: ${{ inputs.github-summary }}
+
+      - name: Validate PR title as squash commit
+        uses: KiTechSoftware/stability-flow@${{ inputs.stability-flow-ref }}
+        with:
+          command: validate-commit
+          message: ${{ inputs.title }}
+          mode: squash
+          format: ${{ inputs.format }}
+          github-summary: ${{ inputs.github-summary }}

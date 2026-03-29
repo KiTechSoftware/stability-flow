@@ -1,0 +1,52 @@
+name: Stability Flow sync branch
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        description: Branch name from the push event
+        required: true
+        type: string
+      message:
+        description: Commit message to validate
+        required: true
+        type: string
+      format:
+        description: CLI output format
+        required: false
+        type: string
+        default: text
+      github-summary:
+        description: Append validator output to the GitHub Actions summary
+        required: false
+        type: boolean
+        default: true
+      stability-flow-ref:
+        description: Ref to use when calling KiTechSoftware/stability-flow
+        required: false
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  enforce:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate branch name
+        uses: KiTechSoftware/stability-flow@${{ inputs.stability-flow-ref }}
+        with:
+          command: validate-branch-name
+          branch: ${{ inputs.branch }}
+          format: ${{ inputs.format }}
+          github-summary: ${{ inputs.github-summary }}
+
+      - name: Validate commit message
+        uses: KiTechSoftware/stability-flow@${{ inputs.stability-flow-ref }}
+        with:
+          command: validate-commit
+          message: ${{ inputs.message }}
+          mode: work
+          format: ${{ inputs.format }}
+          github-summary: ${{ inputs.github-summary }}

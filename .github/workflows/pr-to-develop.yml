@@ -1,0 +1,144 @@
+name: Stability Flow PR to develop
+
+on:
+  workflow_call:
+    inputs:
+      source:
+        description: PR source branch
+        required: true
+        type: string
+      target:
+        description: PR target branch
+        required: true
+        type: string
+      title:
+        description: PR title, used as final squash commit message
+        required: true
+        type: string
+      allow_non_prefixed_branches_to_develop:
+        description: Allow non-prefixed contributor branches when the PR target is develop
+        required: false
+        type: boolean
+        default: false
+      format:
+        description: CLI output format
+        required: false
+        type: string
+        default: text
+      github-summary:
+        description: Append validator output to the GitHub Actions summary
+        required: false
+        type: boolean
+        default: true
+      stability-flow-ref:
+        description: Ref to use when calling KiTechSoftware/stability-flow
+        required: false
+        type: string
+        default: main
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  classify-source:
+    runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.classify.outputs.mode }}
+    steps:
+      - id: classify
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_branch='${{ inputs.source }}'
+          allow_non_prefixed='${{ inputs.allow_non_prefixed_branches_to_develop }}'
+
+          case "$source_branch" in
+            feat/*|fix/*|docs/*|ci/*|refactor/*|chore/*|sync/*)
+              echo "mode=strict" >> "$GITHUB_OUTPUT"
+              ;;
+            release/*|hotfix/*|wip/*|main|develop)
+              echo "::error::${source_branch} is not allowed to target develop"
+              exit 1
+              ;;
+            *)
+              if [[ "$allow_non_prefixed" == "true" ]]; then
+                echo "mode=non_prefixed" >> "$GITHUB_OUTPUT"
+              else
+                echo "::error::Non-prefixed branches targeting develop are disabled"
+                exit 1
+              fi
+              ;;
+          esac
+
+  enforce-strict:
+    if: needs.classify-source.outputs.mode == 'strict'
+    needs: classify-source
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate source branch name
+        uses: KiTechSoftware/stability-flow@${{ inputs.stability-flow-ref }}
+        with:
+          command: validate-branch-name
+          branch: ${{ inputs.source }}
+          format: ${{ inputs.format }}
+          github-summary: ${{ inputs.github-summary }}
+
+      - name: Validate target branch name
+        uses: KiTechSoftware/stability-flow@${{ inputs.stability-flow-ref }}
+        with:
+          command: validate-branch-name
+          branch: ${{ inputs.target }}
+          format: ${{ inputs.format }}
+          github-summary: ${{ inputs.github-summary }}
+
+      - name: Validate merge path
+        uses: KiTechSoftware/stability-flow@${{ inputs.stability-flow-ref }}
+        with:
+          command: validate-merge
+          source: ${{ inputs.source }}
+          target: ${{ inputs.target }}
+          format: ${{ inputs.format }}
+          github-summary: ${{ inputs.github-summary }}
+
+      - name: Validate PR title as squash commit
+        uses: KiTechSoftware/stability-flow@${{ inputs.stability-flow-ref }}
+        with:
+          command: validate-commit
+          message: ${{ inputs.title }}
+          mode: squash
+          format: ${{ inputs.format }}
+          github-summary: ${{ inputs.github-summary }}
+
+  enforce-non-prefixed:
+    if: needs.classify-source.outputs.mode == 'non_prefixed'
+    needs: classify-source
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate target branch name
+        uses: KiTechSoftware/stability-flow@${{ inputs.stability-flow-ref }}
+        with:
+          command: validate-branch-name
+          branch: ${{ inputs.target }}
+          format: ${{ inputs.format }}
+          github-summary: ${{ inputs.github-summary }}
+
+      - name: Validate PR title as squash commit
+        uses: KiTechSoftware/stability-flow@${{ inputs.stability-flow-ref }}
+        with:
+          command: validate-commit
+          message: ${{ inputs.title }}
+          mode: squash
+          format: ${{ inputs.format }}
+          github-summary: ${{ inputs.github-summary }}
+
+      - name: Record compatibility mode
+        shell: bash
+        run: |
+          {
+            echo "### develop compatibility mode"
+            echo
+            echo "Accepted non-prefixed branch: \`${{ inputs.source }}\`"
+            echo
+            echo "Reserved Stability Flow prefixes remain blocked."
+          } >> "$GITHUB_STEP_SUMMARY"

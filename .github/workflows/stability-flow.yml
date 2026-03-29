@@ -1,0 +1,110 @@
+name: Stability Flow
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - 'release/*'
+      - 'hotfix/*'
+      - 'sync/*'
+      - 'wip/*'
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      allow_non_prefixed_branches_to_develop:
+        description: Allow non-prefixed contributor branches when the PR target is develop
+        required: false
+        type: boolean
+        default: false
+      format:
+        description: CLI output format
+        required: false
+        type: string
+        default: text
+      github-summary:
+        description: Append validator output to the GitHub Actions summary
+        required: false
+        type: boolean
+        default: true
+      stability-flow-ref:
+        description: Ref to use when calling KiTechSoftware/stability-flow
+        required: false
+        type: string
+        default: main
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  pr-to-main:
+    name: stability-flow/pr-to-main
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    uses: KiTechSoftware/stability-flow/.github/workflows/pr-to-main.yml
+    with:
+      source: ${{ github.head_ref }}
+      target: ${{ github.base_ref }}
+      title: ${{ github.event.pull_request.title }}
+      format: ${{ inputs.format || 'text' }}
+      github-summary: ${{ inputs.github-summary != false }}
+      stability-flow-ref: ${{ inputs.stability-flow-ref || 'main' }}
+
+  pr-to-develop:
+    name: stability-flow/pr-to-develop
+    if: github.event_name == 'pull_request' && github.base_ref == 'develop'
+    uses: KiTechSoftware/stability-flow/.github/workflows/pr-to-develop.yml
+    with:
+      source: ${{ github.head_ref }}
+      target: ${{ github.base_ref }}
+      title: ${{ github.event.pull_request.title }}
+      allow_non_prefixed_branches_to_develop: ${{ inputs.allow_non_prefixed_branches_to_develop || false }}
+      format: ${{ inputs.format || 'text' }}
+      github-summary: ${{ inputs.github-summary != false }}
+      stability-flow-ref: ${{ inputs.stability-flow-ref || 'main' }}
+
+  release-branch:
+    name: stability-flow/release-branch
+    if: github.event_name == 'push' && startsWith(github.ref_name, 'release/')
+    uses: KiTechSoftware/stability-flow/.github/workflows/release-branch.yml
+    with:
+      branch: ${{ github.ref_name }}
+      message: ${{ github.event.head_commit.message }}
+      format: ${{ inputs.format || 'text' }}
+      github-summary: ${{ inputs.github-summary != false }}
+      stability-flow-ref: ${{ inputs.stability-flow-ref || 'main' }}
+
+  hotfix-branch:
+    name: stability-flow/hotfix-branch
+    if: github.event_name == 'push' && startsWith(github.ref_name, 'hotfix/')
+    uses: KiTechSoftware/stability-flow/.github/workflows/hotfix-branch.yml
+    with:
+      branch: ${{ github.ref_name }}
+      message: ${{ github.event.head_commit.message }}
+      format: ${{ inputs.format || 'text' }}
+      github-summary: ${{ inputs.github-summary != false }}
+      stability-flow-ref: ${{ inputs.stability-flow-ref || 'main' }}
+
+  sync-branch:
+    name: stability-flow/sync-branch
+    if: github.event_name == 'push' && startsWith(github.ref_name, 'sync/')
+    uses: KiTechSoftware/stability-flow/.github/workflows/sync-branch.yml
+    with:
+      branch: ${{ github.ref_name }}
+      message: ${{ github.event.head_commit.message }}
+      format: ${{ inputs.format || 'text' }}
+      github-summary: ${{ inputs.github-summary != false }}
+      stability-flow-ref: ${{ inputs.stability-flow-ref || 'main' }}
+
+  wip-branch:
+    name: stability-flow/wip-branch
+    if: github.event_name == 'push' && startsWith(github.ref_name, 'wip/')
+    uses: KiTechSoftware/stability-flow/.github/workflows/wip-branch.yml
+    with:
+      branch: ${{ github.ref_name }}
+      message: ${{ github.event.head_commit.message }}
+      format: ${{ inputs.format || 'text' }}
+      github-summary: ${{ inputs.github-summary != false }}
+      stability-flow-ref: ${{ inputs.stability-flow-ref || 'main' }}
