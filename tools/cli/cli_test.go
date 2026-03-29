@@ -158,7 +158,7 @@ func TestCLICommands(t *testing.T) {
 		}
 
 		assertContainsAll(t, output,
-			"## Stability Flow Validation Result",
+			"### Stability Flow Branch Origin Validation Result",
 			"**Command:** `validate-origin`",
 			"**Status:** ✅ Passed",
 			"**Branch:** `release/1.2.4`",
@@ -304,7 +304,7 @@ func TestCLICommands(t *testing.T) {
 		}
 
 		assertContainsAll(t, output,
-			"## Stability Flow Validation Result",
+			"### Stability Flow Commit Validation Result",
 			"**Command:** `validate-commit`",
 			"**Status:** ✅ Passed",
 			"**Message:** `perf: improve query latency`",
@@ -357,7 +357,7 @@ func TestCLICommands(t *testing.T) {
 		}
 
 		assertContainsAll(t, output,
-			"## Stability Flow Validation Result",
+			"### Stability Flow Branch Name Validation Result",
 			"**Command:** `validate-branch-name`",
 			"**Status:** ✅ Passed",
 			"**Branch:** `main`",
