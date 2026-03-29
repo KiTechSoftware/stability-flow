@@ -1,0 +1,27 @@
+name: Test Stability Flow
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - 'release/*'
+      - 'hotfix/*'
+      - 'sync/*'
+      - 'wip/*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  stability-flow:
+    uses: ./.github/workflows/stability-flow.yml
+    with:
+      allow_non_prefixed_branches_to_develop: false
+      format: text
+      github-summary: true
+      stability-flow-ref: main
