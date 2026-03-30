@@ -33,14 +33,20 @@ on:
         required: false
         default: true
         type: boolean
-        
+    outputs:
+      branch:
+        description: 'Created release branch name'
+        value: ${{ jobs.create-release-branch.outputs.branch }}
+
 permissions:
   contents: write
 
 jobs:
   create-release-branch:
     runs-on: ubuntu-latest
-
+    outputs:
+      branch: ${{ steps.branch.outputs.branch }}
+      
     steps:
       - name: Validate source branch
         shell: bash

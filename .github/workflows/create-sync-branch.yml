@@ -23,14 +23,20 @@ on:
         required: false
         default: true
         type: boolean
-        
+    outputs:
+      branch:
+        description: 'Created release branch name'
+        value: ${{ jobs.create-sync-branch.outputs.branch }}
+
 permissions:
   contents: write
 
 jobs:
   create-sync-branch:
     runs-on: ubuntu-latest
-
+    outputs:
+      branch: ${{ steps.branch.outputs.branch }}
+      
     steps:
       - name: Build branch name
         id: branch
