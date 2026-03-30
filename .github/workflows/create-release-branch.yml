@@ -17,7 +17,23 @@ on:
         required: false
         default: true
         type: boolean
-
+  workflow_call:
+    inputs:
+      identifier:
+        description: 'Release identifier, e.g. 1.3.0'
+        required: true
+        type: string
+      source_branch:
+        description: 'Must be develop or hotfix/*'
+        required: false
+        default: 'develop'
+        type: string
+      push_branch:
+        description: 'Push the created branch to origin'
+        required: false
+        default: true
+        type: boolean
+        
 permissions:
   contents: write
 

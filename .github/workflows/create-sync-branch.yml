@@ -12,7 +12,18 @@ on:
         required: false
         default: true
         type: boolean
-
+  workflow_call:
+    inputs:
+      identifier:
+        description: 'Sync identifier suffix, e.g. 1.2.4'
+        required: true
+        type: string
+      push_branch:
+        description: 'Push the created branch to origin'
+        required: false
+        default: true
+        type: boolean
+        
 permissions:
   contents: write
 
